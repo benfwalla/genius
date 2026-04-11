@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { FONTS, ACCENT_COLORS, POST_TYPES, type FontId } from "@/lib/constants";
-import type { Doc } from "../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 
 function slugify(text: string) {
   return text
@@ -14,101 +14,201 @@ function slugify(text: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export default function PostForm({ post }: { post?: Doc<"posts"> }) {
+export default function PostForm({
+  post,
+}: {
+  post?: Doc<"posts"> & { imageUrl?: string | null };
+}) {
   const router = useRouter();
   const createPost = useMutation(api.posts.create);
   const updatePost = useMutation(api.posts.update);
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isEditing = !!post;
 
   const [title, setTitle] = useState(post?.title ?? "");
   const [author, setAuthor] = useState(post?.author ?? "");
   const [type, setType] = useState(post?.type ?? "lyrics");
   const [content, setContent] = useState(post?.content ?? "");
-  const [font, setFont] = useState<FontId>((post?.font as FontId) ?? "lora");
-  const [accentColor, setAccentColor] = useState(
-    post?.accentColor ?? "#FFFF00"
-  );
+  const [font, setFont] = useState<FontId>((post?.font as FontId) ?? "dm-sans");
+  const [accentColor, setAccentColor] = useState(post?.accentColor ?? "#FFFF00");
+  const [imagePreview, setImagePreview] = useState<string | null>(post?.imageUrl ?? null);
+  const [createdAt, setCreatedAt] = useState(() => {
+    const d = post ? new Date(post.createdAt) : new Date();
+    return d.toISOString().slice(0, 10);
+  });
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const mountedRef = useRef(false);
+  const blobUrlRef = useRef<string | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Use refs for form values so autoSave is stable
+  const formRef = useRef({ title, author, type, content, font, accentColor, createdAt });
+  formRef.current = { title, author, type, content, font, accentColor, createdAt };
+
+  const showSaved = useCallback(() => {
+    setSaved(true);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
+  }, []);
+
+  const autoSave = useCallback(async () => {
+    if (!post) return;
+    setSaving(true);
+    setSaved(false);
+    const v = formRef.current;
+    const timestamp = new Date(v.createdAt + "T12:00:00").getTime();
+    await updatePost({
+      id: post._id,
+      title: v.title,
+      author: v.author,
+      type: v.type,
+      content: v.content,
+      slug: post.slug,
+      font: v.font,
+      accentColor: v.accentColor,
+      createdAt: timestamp,
+    });
+    setSaving(false);
+    showSaved();
+  }, [post, updatePost, showSaved]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(autoSave, 600);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [title, author, type, content, font, accentColor, createdAt, isEditing, autoSave]);
+
+  // Cleanup blob URLs and timers on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    const preview = URL.createObjectURL(file);
+    blobUrlRef.current = preview;
+    setImagePreview(preview);
+
+    if (post) {
+      setSaving(true);
+      const url = await generateUploadUrl();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await res.json();
+      await updatePost({ id: post._id, imageId: storageId as Id<"_storage"> });
+      setSaving(false);
+      showSaved();
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const slug = post?.slug ?? slugify(title);
+    const slug = slugify(title);
     try {
-      if (post) {
-        await updatePost({
-          id: post._id,
-          title,
-          author,
-          type,
-          content,
-          slug,
-          font,
-          accentColor,
+      let imageId: Id<"_storage"> | undefined;
+      if (fileInputRef.current?.files?.[0]) {
+        const file = fileInputRef.current.files[0];
+        const url = await generateUploadUrl();
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
         });
-      } else {
-        await createPost({ title, author, type, content, slug, font, accentColor });
+        const { storageId } = await res.json();
+        imageId = storageId as Id<"_storage">;
       }
+      const timestamp = new Date(createdAt + "T12:00:00").getTime();
+      const args: Parameters<typeof createPost>[0] = {
+        title, author, type, content, slug, font, accentColor, createdAt: timestamp,
+      };
+      if (imageId) args.imageId = imageId;
+      await createPost(args);
       router.push("/admin");
     } finally {
       setSaving(false);
     }
   }
 
+  const inputClass =
+    "rounded-lg border border-zinc-400 px-4 py-3 text-base text-black focus:border-black focus:outline-none";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          required
-          className="col-span-2 rounded-lg border border-zinc-200 px-4 py-2.5 text-sm focus:border-zinc-400 focus:outline-none"
-        />
-        <input
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-          placeholder="Author"
-          required
-          className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm focus:border-zinc-400 focus:outline-none"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm focus:border-zinc-400 focus:outline-none"
-        >
+    <form onSubmit={isEditing ? (e) => e.preventDefault() : handleCreate} className="space-y-6 max-w-2xl">
+      {isEditing && (
+        <p className="text-xs text-black h-4">
+          {saving ? "Saving..." : saved ? "Saved" : ""}
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-4">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required className={`col-span-3 ${inputClass}`} />
+        <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author" required className={inputClass} />
+        <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
           {POST_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+            <option key={t} value={t}>{t}</option>
           ))}
         </select>
+        <input type="date" value={createdAt} onChange={(e) => setCreatedAt(e.target.value)} className={inputClass} />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-black mb-3">Cover image</label>
+        {imagePreview && (
+          <div className="mb-3">
+            <img src={imagePreview} alt="Cover preview" className="rounded-lg max-h-48 object-cover" />
+          </div>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="rounded-lg border border-zinc-400 px-5 py-2.5 text-sm font-medium text-black hover:border-black transition-colors"
+        >
+          {imagePreview ? "Change image" : "Upload image"}
+        </button>
       </div>
 
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="Paste your lyrics, poem, passage..."
-        rows={16}
+        rows={20}
         required
-        className={`w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm leading-relaxed focus:border-zinc-400 focus:outline-none font-${font === "space-grotesk" ? "space" : font}`}
-        style={{ fontFamily: `var(--font-${font === "space-grotesk" ? "space" : font})` }}
+        className={`w-full leading-relaxed ${inputClass}`}
+        style={{ fontFamily: `var(--font-${FONTS.find((f) => f.id === font)?.className.replace("font-", "") ?? "sans"})` }}
       />
 
-      {/* Font picker */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 mb-2">
-          Font
-        </label>
-        <div className="flex gap-2">
+        <label className="block text-sm font-medium text-black mb-3">Font</label>
+        <div className="flex gap-3">
           {FONTS.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setFont(f.id)}
-              className={`px-4 py-2 rounded-lg text-sm border transition-colors ${
-                font === f.id
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-200 hover:border-zinc-300"
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                font === f.id ? "border-black bg-black text-white" : "border-zinc-400 text-black hover:border-black"
               }`}
               style={{ fontFamily: `var(--font-${f.className.replace("font-", "")})` }}
             >
@@ -118,22 +218,17 @@ export default function PostForm({ post }: { post?: Doc<"posts"> }) {
         </div>
       </div>
 
-      {/* Color picker */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 mb-2">
-          Highlight color
-        </label>
-        <div className="flex gap-2">
+        <label className="block text-sm font-medium text-black mb-3">Highlight color</label>
+        <div className="flex gap-3">
           {ACCENT_COLORS.map((c) => (
             <button
               key={c.hex}
               type="button"
               onClick={() => setAccentColor(c.hex)}
               title={c.name}
-              className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                accentColor === c.hex
-                  ? "border-zinc-900 scale-110"
-                  : "border-zinc-200 hover:scale-105"
+              className={`w-10 h-10 rounded-full border-2 transition-transform ${
+                accentColor === c.hex ? "border-black scale-110" : "border-zinc-400 hover:scale-105"
               }`}
               style={{ backgroundColor: c.hex }}
             />
@@ -141,13 +236,15 @@ export default function PostForm({ post }: { post?: Doc<"posts"> }) {
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
-      >
-        {saving ? "Saving..." : post ? "Update" : "Create"}
-      </button>
+      {!isEditing && (
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+        >
+          {saving ? "Creating..." : "Create"}
+        </button>
+      )}
     </form>
   );
 }

@@ -3,8 +3,15 @@
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-playfair: var(--font-playfair), serif;
-  --font-lora: var(--font-lora), serif;
+  --font-dm: var(--font-dm), ui-sans-serif, sans-serif;
   --font-space: var(--font-space), ui-sans-serif, sans-serif;
+}
+
+/* Use the post's accent color for text selection instead of system blue */
+.select-text::selection,
+.select-text *::selection {
+  background-color: var(--selection-color, #FFFF00);
+  color: black;
 }
 
 mark {
@@ -14,14 +21,10 @@ mark {
   border-radius: 2px;
 }
 
-mark:hover {
-  opacity: 0.8;
-}
 
 /* Lexical editor styles */
 .lexical-editor {
   outline: none;
-  min-height: 80px;
 }
 
 .lexical-editor p {

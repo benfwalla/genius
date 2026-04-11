@@ -3,12 +3,12 @@
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
-import AnnotationPanel from "@/components/AnnotationPanel";
 import AnnotationEditor from "@/components/AnnotationEditor";
-import { FONTS } from "@/lib/constants";
+import { getFontClass } from "@/lib/constants";
+import { formatDate } from "@/lib/dates";
 
 export default function AdminEditPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,9 +21,7 @@ export default function AdminEditPage() {
   const updateAnnotation = useMutation(api.annotations.update);
   const removeAnnotation = useMutation(api.annotations.remove);
 
-  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(
-    null
-  );
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<{
     start: number;
     end: number;
@@ -31,13 +29,27 @@ export default function AdminEditPage() {
   } | null>(null);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"annotate" | "edit">("annotate");
+  const [annotationTop, setAnnotationTop] = useState<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  if (!post) return <div className="p-6 text-sm text-zinc-400">Loading...</div>;
+  if (!post) return <div className="p-6 text-base">Loading...</div>;
 
-  const fontDef = FONTS.find((f) => f.id === post.font);
-  const fontClass = fontDef?.className ?? "";
-  const activeAnnotation =
-    annotations?.find((a) => a._id === activeAnnotationId) ?? null;
+  const fontClass = getFontClass(post.font);
+  const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
+
+  function clearSelection() {
+    setActiveAnnotationId(null);
+    setPendingSelection(null);
+    setEditing(false);
+    setAnnotationTop(null);
+  }
+
+  function computeTop(e: React.MouseEvent | MouseEvent) {
+    if (!contentRef.current) return null;
+    const contentRect = contentRef.current.getBoundingClientRect();
+    const targetRect = (e.target as HTMLElement).getBoundingClientRect();
+    return targetRect.top - contentRect.top - 20;
+  }
 
   async function handleSaveAnnotation(html: string) {
     if (pendingSelection && post) {
@@ -51,30 +63,31 @@ export default function AdminEditPage() {
       setPendingSelection(null);
     } else if (activeAnnotation) {
       await updateAnnotation({ id: activeAnnotation._id, body: html });
-      setActiveAnnotationId(null);
     }
     setEditing(false);
   }
 
+  const showSidebar = (pendingSelection && editing) || activeAnnotation;
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-3 mb-8">
         <button
           onClick={() => setTab("annotate")}
-          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg border transition-colors ${
             tab === "annotate"
-              ? "bg-zinc-900 text-white"
-              : "text-zinc-500 hover:text-zinc-700"
+              ? "bg-black text-white border-black"
+              : "text-black border-zinc-400 hover:border-black"
           }`}
         >
           Annotate
         </button>
         <button
           onClick={() => setTab("edit")}
-          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg border transition-colors ${
             tab === "edit"
-              ? "bg-zinc-900 text-white"
-              : "text-zinc-500 hover:text-zinc-700"
+              ? "bg-black text-white border-black"
+              : "text-black border-zinc-400 hover:border-black"
           }`}
         >
           Edit details
@@ -84,90 +97,127 @@ export default function AdminEditPage() {
       {tab === "edit" ? (
         <PostForm post={post} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-          <div>
-            <h1 className="text-xl font-semibold mb-1">{post.title}</h1>
-            <p className="text-sm text-zinc-400 mb-6">
-              {post.author} &middot; {post.type}
-            </p>
-            <TextSelector
-              content={post.content}
-              annotations={annotations ?? []}
-              accentColor={post.accentColor}
-              activeAnnotationId={activeAnnotationId ?? undefined}
-              onAnnotationClick={(id) => {
-                setActiveAnnotationId(id);
-                setPendingSelection(null);
-                setEditing(false);
-              }}
-              onSelect={(start, end, text) => {
-                setPendingSelection({ start, end, text });
-                setActiveAnnotationId(null);
-                setEditing(true);
-              }}
-              fontClass={fontClass}
-            />
-          </div>
-
-          <aside className="lg:border-l lg:border-zinc-100 lg:pl-6">
-            <div className="sticky top-6">
-              {pendingSelection && editing ? (
-                <div className="space-y-3">
-                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
-                    New annotation
+        <>
+          <div className="flex items-start gap-6 mb-10">
+            {post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt=""
+                className="w-28 h-28 rounded-lg object-cover shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-4xl font-bold tracking-tight">{post.title}</h1>
+                  <p className="text-lg text-black mt-1">
+                    {post.author}
+                    <span className="ml-2 inline-block text-xs font-medium border border-zinc-400 rounded-full px-2.5 py-0.5 align-middle">
+                      {post.type}
+                    </span>
                   </p>
-                  <blockquote className="text-xs text-zinc-500 border-l-2 border-zinc-200 pl-3 italic">
-                    &ldquo;{pendingSelection.text}&rdquo;
-                  </blockquote>
-                  <AnnotationEditor
-                    onSave={handleSaveAnnotation}
-                    onCancel={() => {
-                      setPendingSelection(null);
-                      setEditing(false);
-                    }}
-                  />
                 </div>
-              ) : activeAnnotation ? (
-                <div className="space-y-3">
-                  <AnnotationPanel
-                    annotation={activeAnnotation}
-                    onClose={() => setActiveAnnotationId(null)}
-                  />
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="text-xs text-zinc-500 hover:text-zinc-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (confirm("Delete this annotation?")) {
-                          await removeAnnotation({ id: activeAnnotation._id });
-                          setActiveAnnotationId(null);
-                        }
-                      }}
-                      className="text-xs text-zinc-400 hover:text-red-500"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                  {editing && (
-                    <AnnotationEditor
-                      initialHtml={activeAnnotation.body}
-                      onSave={handleSaveAnnotation}
-                      onCancel={() => setEditing(false)}
-                    />
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-zinc-400 italic">
-                  Select text to annotate, or click a highlight to edit.
+                <p className="text-sm text-black shrink-0 mt-2">
+                  {formatDate(post.createdAt)}
                 </p>
-              )}
+              </div>
             </div>
-          </aside>
-        </div>
+          </div>
+          <hr className="border-zinc-300 mb-10" />
+          <div
+            ref={contentRef}
+            className="relative grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-10"
+          >
+            <div>
+              <TextSelector
+                content={post.content}
+                annotations={annotations ?? []}
+                accentColor={post.accentColor}
+                activeAnnotationId={activeAnnotationId ?? undefined}
+                onAnnotationClick={(id, e) => {
+                  setActiveAnnotationId(id);
+                  setPendingSelection(null);
+                  setEditing(false);
+                  if (id && e) setAnnotationTop(computeTop(e));
+                  else setAnnotationTop(null);
+                }}
+                onSelect={(start, end, text, e) => {
+                  setPendingSelection({ start, end, text });
+                  setActiveAnnotationId(null);
+                  setEditing(true);
+                  if (e) setAnnotationTop(computeTop(e));
+                }}
+                onClickOut={clearSelection}
+                fontClass={fontClass}
+                pendingRange={pendingSelection ?? undefined}
+              />
+            </div>
+
+            <aside className="hidden lg:block">
+              <div
+                className="absolute right-0 w-[440px] pl-8"
+                style={{
+                  top: annotationTop != null ? `${Math.max(0, annotationTop)}px` : "0px",
+                  opacity: showSidebar ? 1 : 0,
+                  pointerEvents: showSidebar ? "auto" : "none",
+                }}
+              >
+                {pendingSelection && editing ? (
+                  <div className="rounded-lg border border-zinc-300 p-5 space-y-3">
+                    <p className="text-sm font-semibold text-black">New annotation</p>
+                    <AnnotationEditor
+                      onSave={handleSaveAnnotation}
+                      onCancel={() => {
+                        setPendingSelection(null);
+                        setEditing(false);
+                        setAnnotationTop(null);
+                      }}
+                    />
+                  </div>
+                ) : activeAnnotation ? (
+                  <div className="rounded-lg border border-zinc-300 p-5 space-y-3">
+                    <p className="text-sm font-semibold text-black">Annotation</p>
+                    {editing ? (
+                      <AnnotationEditor
+                        key={activeAnnotation._id}
+                        initialHtml={activeAnnotation.body}
+                        onSave={handleSaveAnnotation}
+                        onCancel={() => setEditing(false)}
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className="prose prose-base prose-black max-w-none leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: activeAnnotation.body }}
+                        />
+                        <div className="flex gap-4 pt-2">
+                          <button
+                            onClick={() => setEditing(true)}
+                            className="text-sm text-black font-medium hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm("Delete this annotation?")) {
+                                await removeAnnotation({ id: activeAnnotation._id });
+                                setActiveAnnotationId(null);
+                                setAnnotationTop(null);
+                              }
+                            }}
+                            className="text-sm text-black font-medium hover:text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </aside>
+          </div>
+        </>
       )}
     </div>
   );

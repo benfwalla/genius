@@ -1,6 +1,7 @@
 import { requireAdmin, logout } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function AdminLayout({
   children,
@@ -17,19 +18,19 @@ export default async function AdminLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
-        <Link href="/admin" className="text-sm font-semibold tracking-tight">
-          genius.ben-mini.com
-          <span className="ml-2 text-xs font-normal text-zinc-400">admin</span>
+      <header className="border-b border-zinc-300 px-6 py-5 flex items-center justify-between">
+        <Link href="/admin" className="flex items-center gap-3">
+          <Image src="/logo.svg" alt="genius.ben-mini.com" width={240} height={48} />
+          <span className="text-sm font-medium text-black">admin</span>
         </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-xs text-zinc-500 hover:text-zinc-700">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-sm text-black font-medium hover:underline">
             View site
           </Link>
           <form action={handleLogout}>
             <button
               type="submit"
-              className="text-xs text-zinc-500 hover:text-zinc-700"
+              className="text-sm text-black font-medium hover:underline"
             >
               Log out
             </button>

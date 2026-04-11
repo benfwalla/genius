@@ -31,10 +31,10 @@ function Toolbar() {
   };
 
   const btnClass =
-    "px-2 py-1 text-xs rounded border border-zinc-200 hover:bg-zinc-50 transition-colors";
+    "px-3 py-2 text-sm rounded-lg border border-zinc-400 hover:bg-zinc-50 transition-colors";
 
   return (
-    <div className="flex gap-1 mb-2 pb-2 border-b border-zinc-100">
+    <div className="flex gap-2 mb-3 pb-3 border-b border-zinc-300">
       <button type="button" onClick={formatBold} className={`${btnClass} font-bold`}>
         B
       </button>
@@ -86,35 +86,37 @@ export default function AnnotationEditor({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <LexicalComposer initialConfig={initialConfig}>
         <Toolbar />
-        <RichTextPlugin
-          contentEditable={
-            <ContentEditable className="lexical-editor rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none" />
-          }
-          placeholder={
-            <div className="absolute top-[52px] left-3 text-sm text-zinc-400 pointer-events-none">
-              Write your annotation...
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
+        <div className="relative">
+          <RichTextPlugin
+            contentEditable={
+              <ContentEditable className="lexical-editor rounded-lg border border-zinc-400 px-4 py-3 text-base text-black focus:border-black focus:outline-none min-h-[240px]" />
+            }
+            placeholder={
+              <div className="absolute top-3 left-4 text-base text-zinc-300 pointer-events-none">
+                Write your annotation...
+              </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+        </div>
         <HistoryPlugin />
         <LinkPlugin />
         <OnChangePlugin onChange={handleChange} />
       </LexicalComposer>
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <button
           onClick={() => onSave(html)}
           disabled={!html.trim()}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          className="rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
         >
           Save
         </button>
         <button
           onClick={onCancel}
-          className="rounded-lg border border-zinc-200 px-4 py-2 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+          className="rounded-lg border border-zinc-400 px-5 py-2.5 text-sm text-black hover:bg-zinc-50 transition-colors"
         >
           Cancel
         </button>

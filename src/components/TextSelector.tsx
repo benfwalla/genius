@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import type { Doc } from "../../convex/_generated/dataModel";
 import TextDisplay from "./TextDisplay";
 
@@ -23,45 +23,49 @@ export default function TextSelector({
   activeAnnotationId,
   onAnnotationClick,
   onSelect,
+  onClickOut,
   fontClass,
+  pendingRange,
 }: {
   content: string;
   annotations: Doc<"annotations">[];
   accentColor: string;
   activeAnnotationId?: string;
-  onAnnotationClick?: (id: string | null) => void;
-  onSelect?: (start: number, end: number, text: string) => void;
+  onAnnotationClick?: (id: string | null, e?: React.MouseEvent) => void;
+  onSelect?: (start: number, end: number, text: string, e?: MouseEvent) => void;
+  onClickOut?: () => void;
   fontClass?: string;
+  pendingRange?: { start: number; end: number };
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const justSelectedRef = useRef(false);
 
-  const handleMouseUp = useCallback(() => {
+  const handleSelection = useCallback((mouseEvent?: MouseEvent) => {
     if (!onSelect || !containerRef.current) return;
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
 
     const range = sel.getRangeAt(0);
-    if (!containerRef.current.contains(range.commonAncestorContainer)) return;
+    if (
+      !containerRef.current.contains(range.startContainer) &&
+      !containerRef.current.contains(range.endContainer)
+    ) return;
 
-    const start = getTextOffset(
-      containerRef.current,
-      range.startContainer,
-      range.startOffset
-    );
-    const end = getTextOffset(
-      containerRef.current,
-      range.endContainer,
-      range.endOffset
-    );
+    const start = getTextOffset(containerRef.current, range.startContainer, range.startOffset);
+    const end = getTextOffset(containerRef.current, range.endContainer, range.endOffset);
 
     if (start === end) return;
 
     const [lo, hi] = start < end ? [start, end] : [end, start];
-    const text = content.slice(lo, hi);
+    const clampedLo = Math.max(0, lo);
+    const clampedHi = Math.min(content.length, hi);
+    if (clampedLo >= clampedHi) return;
 
-    // Check for overlap with existing annotations
+    const text = content.slice(clampedLo, clampedHi);
+
     const overlaps = annotations.some(
-      (a) => lo < a.endOffset && hi > a.startOffset
+      (a) => clampedLo < a.endOffset && clampedHi > a.startOffset
     );
     if (overlaps) {
       alert("This selection overlaps an existing annotation. Remove it first.");
@@ -69,12 +73,48 @@ export default function TextSelector({
       return;
     }
 
-    onSelect(lo, hi, text);
+    justSelectedRef.current = true;
+    onSelect(clampedLo, clampedHi, text, mouseEvent);
     sel.removeAllRanges();
   }, [content, annotations, onSelect]);
 
+  useEffect(() => {
+    function onMouseUp(e: MouseEvent) {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        handleSelection(e);
+      }
+    }
+    document.addEventListener("mouseup", onMouseUp);
+    return () => document.removeEventListener("mouseup", onMouseUp);
+  }, [handleSelection]);
+
+  const handleMouseDown = useCallback(() => {
+    isDraggingRef.current = true;
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.tagName !== "MARK" && onClickOut) {
+        onClickOut();
+      }
+    },
+    [onClickOut]
+  );
+
   return (
-    <div ref={containerRef} onMouseUp={handleMouseUp} className="select-text">
+    <div
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+      className="select-text"
+      style={{ "--selection-color": accentColor } as React.CSSProperties}
+    >
       <TextDisplay
         content={content}
         annotations={annotations}
@@ -82,6 +122,7 @@ export default function TextSelector({
         activeAnnotationId={activeAnnotationId}
         onAnnotationClick={onAnnotationClick}
         fontClass={fontClass}
+        pendingRange={pendingRange}
       />
     </div>
   );

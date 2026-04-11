@@ -10,6 +10,7 @@ export default defineSchema({
     slug: v.string(),
     font: v.string(),
     accentColor: v.string(),
+    imageId: v.optional(v.id("_storage")),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]),
 

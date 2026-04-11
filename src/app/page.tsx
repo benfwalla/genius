@@ -3,39 +3,39 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
+import Header from "@/components/Header";
+import { formatDate } from "@/lib/dates";
 
 export default function HomePage() {
   const posts = useQuery(api.posts.list);
 
   return (
     <div className="flex flex-col flex-1">
-      <header className="border-b border-zinc-100 px-6 py-4">
-        <Link href="/" className="text-sm font-semibold tracking-tight">
-          genius.ben-mini.com
-        </Link>
-      </header>
+      <Header />
       <main className="max-w-2xl mx-auto w-full px-6 py-10">
         {!posts ? (
-          <p className="text-sm text-zinc-400">Loading...</p>
+          <p className="text-base">Loading...</p>
         ) : posts.length === 0 ? (
-          <p className="text-sm text-zinc-400">Nothing here yet.</p>
+          <p className="text-base">Nothing here yet.</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {posts.map((post) => (
               <Link
                 key={post._id}
                 href={`/${post.slug}`}
-                className="block group"
+                className="flex items-center justify-between rounded-lg border border-zinc-300 px-5 py-4 hover:border-black transition-colors"
               >
-                <div className="flex items-baseline gap-3">
-                  <h2 className="text-base font-medium group-hover:underline">
-                    {post.title}
-                  </h2>
-                  <span className="text-xs text-zinc-400 shrink-0">
-                    {post.type}
-                  </span>
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  {post.imageUrl && (
+                    <img src={post.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-base font-medium truncate">{post.title}</p>
+                    <p className="text-sm text-black">
+                      {post.author} &middot; {post.type} &middot; {formatDate(post.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-zinc-500 mt-0.5">{post.author}</p>
               </Link>
             ))}
           </div>

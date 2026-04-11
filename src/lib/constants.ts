@@ -1,6 +1,6 @@
 export const FONTS = [
   { id: "playfair", name: "Playfair Display", className: "font-playfair" },
-  { id: "lora", name: "Lora", className: "font-lora" },
+  { id: "dm-sans", name: "DM Sans", className: "font-dm" },
   { id: "space-grotesk", name: "Space Grotesk", className: "font-space" },
 ] as const;
 
@@ -27,3 +27,7 @@ export const POST_TYPES = [
 
 export type FontId = (typeof FONTS)[number]["id"];
 export type PostType = (typeof POST_TYPES)[number];
+
+export function getFontClass(fontId: string): string {
+  return FONTS.find((f) => f.id === fontId)?.className ?? "";
+}
