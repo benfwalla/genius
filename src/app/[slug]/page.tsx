@@ -3,12 +3,17 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import TextDisplay from "@/components/TextDisplay";
 import AnnotationPanel from "@/components/AnnotationPanel";
 import { getFontClass } from "@/lib/constants";
 import { formatDate } from "@/lib/dates";
+
+const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
+  ssr: false,
+});
 
 export default function PostDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +26,27 @@ export default function PostDetailPage() {
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
+
+  const handleClose = useCallback(() => {
+    setActiveAnnotationId(null);
+    setAnnotationTop(null);
+  }, []);
+
+  const handleAnnotationClick = useCallback(
+    (id: string | null, e?: React.MouseEvent) => {
+      setActiveAnnotationId(id);
+      if (id && e && contentRef.current) {
+        const contentRect = contentRef.current.getBoundingClientRect();
+        const markRect = (e.target as HTMLElement).getBoundingClientRect();
+        setAnnotationTop(markRect.top - contentRect.top - 20);
+      } else {
+        setAnnotationTop(null);
+      }
+    },
+    []
+  );
+
   if (!post) {
     return (
       <div className="flex flex-1 items-center justify-center text-base text-black">
@@ -30,19 +56,6 @@ export default function PostDetailPage() {
   }
 
   const fontClass = getFontClass(post.font);
-  const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
-
-  function handleAnnotationClick(id: string | null, e?: React.MouseEvent) {
-    setActiveAnnotationId(id);
-    if (id && e && contentRef.current) {
-      const contentRect = contentRef.current.getBoundingClientRect();
-      const markRect = (e.target as HTMLElement).getBoundingClientRect();
-      // Position annotation slightly above the clicked mark, relative to the content area
-      setAnnotationTop(markRect.top - contentRect.top - 20);
-    } else {
-      setAnnotationTop(null);
-    }
-  }
 
   return (
     <div className="flex flex-col flex-1">
@@ -82,8 +95,7 @@ export default function PostDetailPage() {
             onClick={(e) => {
               const target = e.target as HTMLElement;
               if (target.tagName !== "MARK") {
-                setActiveAnnotationId(null);
-                setAnnotationTop(null);
+                handleClose();
               }
             }}
           >
@@ -96,6 +108,7 @@ export default function PostDetailPage() {
               fontClass={fontClass}
             />
           </div>
+          {/* Desktop sidebar */}
           <aside className="hidden lg:block">
             <div
               className="absolute right-0 w-[320px] pl-6"
@@ -110,6 +123,13 @@ export default function PostDetailPage() {
           </aside>
         </div>
       </main>
+
+      {/* Mobile bottom drawer */}
+      <BottomDrawer
+        annotation={activeAnnotation}
+        accentColor={post.accentColor}
+        onClose={handleClose}
+      />
     </div>
   );
 }
