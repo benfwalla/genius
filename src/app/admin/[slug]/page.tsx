@@ -44,11 +44,10 @@ export default function AdminEditPage() {
     setAnnotationTop(null);
   }
 
-  function computeTop(e: React.MouseEvent | MouseEvent) {
+  function computeTop(rect: DOMRect) {
     if (!contentRef.current) return null;
     const contentRect = contentRef.current.getBoundingClientRect();
-    const targetRect = (e.target as HTMLElement).getBoundingClientRect();
-    return targetRect.top - contentRect.top - 20;
+    return rect.top - contentRect.top - 20;
   }
 
   async function handleSaveAnnotation(html: string) {
@@ -138,14 +137,18 @@ export default function AdminEditPage() {
                   setActiveAnnotationId(id);
                   setPendingSelection(null);
                   setEditing(false);
-                  if (id && e) setAnnotationTop(computeTop(e));
-                  else setAnnotationTop(null);
+                  if (id && e) {
+                    const markRect = (e.target as HTMLElement).getBoundingClientRect();
+                    setAnnotationTop(computeTop(markRect));
+                  } else {
+                    setAnnotationTop(null);
+                  }
                 }}
-                onSelect={(start, end, text, e) => {
+                onSelect={(start, end, text, rect) => {
                   setPendingSelection({ start, end, text });
                   setActiveAnnotationId(null);
                   setEditing(true);
-                  if (e) setAnnotationTop(computeTop(e));
+                  if (rect) setAnnotationTop(computeTop(rect));
                 }}
                 onClickOut={clearSelection}
                 fontClass={fontClass}

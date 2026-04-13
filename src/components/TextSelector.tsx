@@ -32,7 +32,7 @@ export default function TextSelector({
   accentColor: string;
   activeAnnotationId?: string;
   onAnnotationClick?: (id: string | null, e?: React.MouseEvent) => void;
-  onSelect?: (start: number, end: number, text: string, e?: MouseEvent) => void;
+  onSelect?: (start: number, end: number, text: string, rect?: DOMRect) => void;
   onClickOut?: () => void;
   fontClass?: string;
   pendingRange?: { start: number; end: number };
@@ -41,7 +41,7 @@ export default function TextSelector({
   const isDraggingRef = useRef(false);
   const justSelectedRef = useRef(false);
 
-  const handleSelection = useCallback((mouseEvent?: MouseEvent) => {
+  const handleSelection = useCallback(() => {
     if (!onSelect || !containerRef.current) return;
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
@@ -73,16 +73,17 @@ export default function TextSelector({
       return;
     }
 
+    const rangeRect = range.getBoundingClientRect();
     justSelectedRef.current = true;
-    onSelect(clampedLo, clampedHi, text, mouseEvent);
+    onSelect(clampedLo, clampedHi, text, rangeRect);
     sel.removeAllRanges();
   }, [content, annotations, onSelect]);
 
   useEffect(() => {
-    function onMouseUp(e: MouseEvent) {
+    function onMouseUp() {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
-        handleSelection(e);
+        handleSelection();
       }
     }
     document.addEventListener("mouseup", onMouseUp);
