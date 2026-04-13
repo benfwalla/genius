@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, type ReactNode } from "react";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 export default function BottomDrawer({
   annotation,
   accentColor,
   onClose,
+  actions,
 }: {
   annotation: Doc<"annotations"> | null;
   accentColor: string;
   onClose: () => void;
+  actions?: ReactNode;
 }) {
   const isOpen = annotation !== null;
 
@@ -36,7 +38,7 @@ export default function BottomDrawer({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-200 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-200 md:hidden ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -44,7 +46,7 @@ export default function BottomDrawer({
 
       {/* Drawer */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-transform duration-300 ease-out md:hidden ${
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "70vh" }}
@@ -74,6 +76,12 @@ export default function BottomDrawer({
                 className="prose prose-base prose-black max-w-none leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: annotation.body }}
               />
+
+              {actions && (
+                <div className="mt-4 pt-4 border-t border-zinc-300">
+                  {actions}
+                </div>
+              )}
             </>
           ) : null}
         </div>

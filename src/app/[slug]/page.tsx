@@ -89,7 +89,7 @@ export default function PostDetailPage() {
         <hr className="border-zinc-300 mb-10" />
         <div
           ref={contentRef}
-          className="relative grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8"
+          className="relative grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8"
         >
           <div
             onClick={(e) => {
@@ -109,7 +109,7 @@ export default function PostDetailPage() {
             />
           </div>
           {/* Desktop sidebar */}
-          <aside className="hidden lg:block">
+          <aside className="hidden md:block">
             <div
               className="absolute right-0 w-[320px] pl-6"
               style={{

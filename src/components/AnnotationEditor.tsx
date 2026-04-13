@@ -95,7 +95,7 @@ export default function AnnotationEditor({
               <ContentEditable className="lexical-editor rounded-lg border border-zinc-400 px-4 py-3 text-base text-black focus:border-black focus:outline-none min-h-[240px]" />
             }
             placeholder={
-              <div className="absolute top-3 left-4 text-base text-zinc-300 pointer-events-none">
+              <div className="absolute top-3 left-4 text-base text-zinc-300 pointer-events-none -z-10">
                 Write your annotation...
               </div>
             }

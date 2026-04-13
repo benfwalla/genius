@@ -4,11 +4,16 @@ import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
 import { getFontClass } from "@/lib/constants";
 import { formatDate } from "@/lib/dates";
+
+const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
+  ssr: false,
+});
 
 export default function AdminEditPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -125,7 +130,7 @@ export default function AdminEditPage() {
           <hr className="border-zinc-300 mb-10" />
           <div
             ref={contentRef}
-            className="relative grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-10"
+            className="relative grid grid-cols-1 md:grid-cols-[1fr_440px] gap-10"
           >
             <div>
               <TextSelector
@@ -134,9 +139,9 @@ export default function AdminEditPage() {
                 accentColor={post.accentColor}
                 activeAnnotationId={activeAnnotationId ?? undefined}
                 onAnnotationClick={(id, e) => {
+                  if (editing) return;
                   setActiveAnnotationId(id);
                   setPendingSelection(null);
-                  setEditing(false);
                   if (id && e) {
                     const markRect = (e.target as HTMLElement).getBoundingClientRect();
                     setAnnotationTop(computeTop(markRect));
@@ -145,18 +150,19 @@ export default function AdminEditPage() {
                   }
                 }}
                 onSelect={(start, end, text, rect) => {
+                  if (editing) return;
                   setPendingSelection({ start, end, text });
                   setActiveAnnotationId(null);
                   setEditing(true);
                   if (rect) setAnnotationTop(computeTop(rect));
                 }}
-                onClickOut={clearSelection}
+                onClickOut={() => { if (!editing) clearSelection(); }}
                 fontClass={fontClass}
                 pendingRange={pendingSelection ?? undefined}
               />
             </div>
 
-            <aside className="hidden lg:block">
+            <aside className="hidden md:block">
               <div
                 className="absolute right-0 w-[440px] pl-8"
                 style={{
@@ -220,6 +226,36 @@ export default function AdminEditPage() {
               </div>
             </aside>
           </div>
+
+          {/* Mobile drawer for viewing/deleting annotations */}
+          <BottomDrawer
+            annotation={activeAnnotation}
+            accentColor={post.accentColor}
+            onClose={clearSelection}
+            actions={
+              activeAnnotation ? (
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="text-sm text-black font-medium hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (confirm("Delete this annotation?")) {
+                        await removeAnnotation({ id: activeAnnotation._id });
+                        clearSelection();
+                      }
+                    }}
+                    className="text-sm text-black font-medium hover:text-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : undefined
+            }
+          />
         </>
       )}
     </div>
