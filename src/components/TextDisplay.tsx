@@ -80,7 +80,7 @@ export default function TextDisplay({
   );
 
   return (
-    <div className={`whitespace-pre-wrap leading-relaxed text-base text-black ${fontClass ?? ""}`}>
+    <div className={`whitespace-pre-wrap leading-relaxed text-lg text-black ${fontClass ?? ""}`}>
       {segments.map((seg, i) =>
         seg.isPending ? (
           <mark key={i} style={{ backgroundColor: accentColor }}>{seg.text}</mark>
