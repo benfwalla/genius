@@ -24,10 +24,15 @@ export default function BottomDrawer({
   );
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+    if (!isOpen) return;
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Only lock body scroll when the drawer is actually visible (below md breakpoint)
+    const mq = window.matchMedia("(max-width: 767px)");
+    if (mq.matches) {
       document.body.style.overflow = "hidden";
     }
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";

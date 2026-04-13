@@ -13,9 +13,12 @@ import { $generateHtmlFromNodes } from "@lexical/html";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   FORMAT_TEXT_COMMAND,
+  $getRoot,
+  $insertNodes,
   type EditorState,
   type LexicalEditor,
 } from "lexical";
+import { $generateNodesFromDOM } from "@lexical/html";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 
@@ -83,6 +86,18 @@ export default function AnnotationEditor({
     theme,
     nodes: [LinkNode, AutoLinkNode, ListNode, ListItemNode],
     onError: (error: Error) => console.error(error),
+    ...(initialHtml
+      ? {
+          editorState: (editor: LexicalEditor) => {
+            const parser = new DOMParser();
+            const dom = parser.parseFromString(initialHtml, "text/html");
+            const nodes = $generateNodesFromDOM(editor, dom);
+            $getRoot().clear();
+            $getRoot().select();
+            $insertNodes(nodes);
+          },
+        }
+      : {}),
   };
 
   return (

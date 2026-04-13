@@ -35,6 +35,7 @@ export default function AdminEditPage() {
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"annotate" | "edit">("annotate");
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   if (!post) return <div className="p-6 text-base">Loading...</div>;
@@ -47,6 +48,7 @@ export default function AdminEditPage() {
     setPendingSelection(null);
     setEditing(false);
     setAnnotationTop(null);
+    setConfirmingDelete(false);
   }
 
   function computeTop(rect: DOMRect) {
@@ -206,18 +208,33 @@ export default function AdminEditPage() {
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={async () => {
-                              if (confirm("Delete this annotation?")) {
-                                await removeAnnotation({ id: activeAnnotation._id });
-                                setActiveAnnotationId(null);
-                                setAnnotationTop(null);
-                              }
-                            }}
-                            className="text-sm text-black font-medium hover:text-red-600"
-                          >
-                            Delete
-                          </button>
+                          {confirmingDelete ? (
+                            <>
+                              <span className="text-sm text-red-600 font-medium">Delete?</span>
+                              <button
+                                onClick={async () => {
+                                  await removeAnnotation({ id: activeAnnotation._id });
+                                  clearSelection();
+                                }}
+                                className="text-sm text-red-600 font-medium underline"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmingDelete(false)}
+                                className="text-sm text-black font-medium underline"
+                              >
+                                No
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmingDelete(true)}
+                              className="text-sm text-black font-medium hover:text-red-600"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </>
                     )}
@@ -241,17 +258,33 @@ export default function AdminEditPage() {
                   >
                     Edit
                   </button>
-                  <button
-                    onClick={async () => {
-                      if (confirm("Delete this annotation?")) {
-                        await removeAnnotation({ id: activeAnnotation._id });
-                        clearSelection();
-                      }
-                    }}
-                    className="text-sm text-black font-medium hover:text-red-600"
-                  >
-                    Delete
-                  </button>
+                  {confirmingDelete ? (
+                    <>
+                      <span className="text-sm text-red-600 font-medium">Delete?</span>
+                      <button
+                        onClick={async () => {
+                          await removeAnnotation({ id: activeAnnotation._id });
+                          clearSelection();
+                        }}
+                        className="text-sm text-red-600 font-medium underline"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDelete(false)}
+                        className="text-sm text-black font-medium underline"
+                      >
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingDelete(true)}
+                      className="text-sm text-black font-medium hover:text-red-600"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               ) : undefined
             }
