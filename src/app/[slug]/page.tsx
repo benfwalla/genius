@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import TextDisplay from "@/components/TextDisplay";
 import AnnotationPanel from "@/components/AnnotationPanel";
 import { getFontClass } from "@/lib/constants";
-import { formatDate } from "@/lib/dates";
+import { formatDate, formatReleaseDate } from "@/lib/dates";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
   ssr: false,
@@ -24,6 +24,7 @@ export default function PostDetailPage() {
   );
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
@@ -61,7 +62,7 @@ export default function PostDetailPage() {
     <div className="flex flex-col flex-1">
       <Header />
       <main className="max-w-4xl mx-auto w-full px-6 pt-10 pb-32">
-        <div className="flex items-start gap-6 mb-10">
+        <div className="flex items-start gap-6 mb-6">
           {post.imageUrl && (
             <img
               src={post.imageUrl}
@@ -70,22 +71,47 @@ export default function PostDetailPage() {
             />
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-4xl font-bold tracking-tight">{post.title}</h1>
-                <p className="text-lg text-black mt-1">
-                  {post.author}
-                  <span className="ml-2 inline-block text-xs font-medium border border-zinc-400 rounded-full px-2.5 py-0.5 align-middle">
-                    {post.type}
-                  </span>
-                </p>
-              </div>
-              <p className="text-sm text-black shrink-0 mt-2">
-                {formatDate(post.createdAt)}
-              </p>
-            </div>
+            <h1 className="text-4xl font-bold tracking-tight">{post.title}</h1>
+            <p className="text-lg text-black mt-1">
+              {post.author}
+              <span className="ml-2 inline-block text-xs font-medium border border-zinc-400 rounded-full px-2.5 py-0.5 align-middle">
+                {post.type}
+              </span>
+            </p>
           </div>
         </div>
+
+        {/* More Information toggle */}
+        <button
+          onClick={() => setInfoOpen(!infoOpen)}
+          className="text-sm text-black mb-6 flex items-center gap-1.5"
+        >
+          <svg
+            className={`w-3.5 h-3.5 transition-transform ${infoOpen ? "rotate-90" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          More information
+        </button>
+        {infoOpen ? (
+          <div className="text-sm text-black space-y-1 mb-6 pl-5">
+            {post.releasedAt && (
+              <p>
+                <span className="font-medium">Released</span>{" "}
+                {formatReleaseDate(post.releasedAt)}
+              </p>
+            )}
+            <p>
+              <span className="font-medium">Added by Ben</span>{" "}
+              {formatDate(post.createdAt)}
+            </p>
+          </div>
+        ) : null}
+
         <hr className="border-zinc-300 mb-10" />
         <div
           ref={contentRef}

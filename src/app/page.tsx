@@ -4,7 +4,6 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { formatDate } from "@/lib/dates";
 
 export default function HomePage() {
   const posts = useQuery(api.posts.list);
@@ -32,7 +31,7 @@ export default function HomePage() {
                   <div className="min-w-0">
                     <p className="text-base font-medium truncate">{post.title}</p>
                     <p className="text-sm text-black">
-                      {post.author} &middot; {post.type} &middot; {formatDate(post.createdAt)}
+                      {post.author} &middot; {post.type}
                     </p>
                   </div>
                 </div>

@@ -32,6 +32,7 @@ export default function PostForm({
   const [content, setContent] = useState(post?.content ?? "");
   const [font, setFont] = useState<FontId>((post?.font as FontId) ?? "dm-sans");
   const [accentColor, setAccentColor] = useState(post?.accentColor ?? "#FFFF00");
+  const [releasedAt, setReleasedAt] = useState(post?.releasedAt ?? "");
   const [imagePreview, setImagePreview] = useState<string | null>(post?.imageUrl ?? null);
   const [createdAt, setCreatedAt] = useState(() => {
     const d = post ? new Date(post.createdAt) : new Date();
@@ -45,8 +46,8 @@ export default function PostForm({
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Use refs for form values so autoSave is stable
-  const formRef = useRef({ title, author, type, content, font, accentColor, createdAt });
-  formRef.current = { title, author, type, content, font, accentColor, createdAt };
+  const formRef = useRef({ title, author, type, content, font, accentColor, releasedAt, createdAt });
+  formRef.current = { title, author, type, content, font, accentColor, releasedAt, createdAt };
 
   const showSaved = useCallback(() => {
     setSaved(true);
@@ -69,6 +70,7 @@ export default function PostForm({
       slug: post.slug,
       font: v.font,
       accentColor: v.accentColor,
+      releasedAt: v.releasedAt || undefined,
       createdAt: timestamp,
     });
     setSaving(false);
@@ -86,7 +88,7 @@ export default function PostForm({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [title, author, type, content, font, accentColor, createdAt, isEditing, autoSave]);
+  }, [title, author, type, content, font, accentColor, releasedAt, createdAt, isEditing, autoSave]);
 
   // Cleanup blob URLs and timers on unmount
   useEffect(() => {
@@ -141,6 +143,7 @@ export default function PostForm({
       const timestamp = new Date(createdAt + "T12:00:00").getTime();
       const args: Parameters<typeof createPost>[0] = {
         title, author, type, content, slug, font, accentColor, createdAt: timestamp,
+        ...(releasedAt ? { releasedAt } : {}),
       };
       if (imageId) args.imageId = imageId;
       await createPost(args);
@@ -161,15 +164,25 @@ export default function PostForm({
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required className={`col-span-3 ${inputClass}`} />
+      <div className="grid grid-cols-2 gap-4">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required className={`col-span-2 ${inputClass}`} />
         <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author" required className={inputClass} />
         <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
           {POST_TYPES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
-        <input type="date" value={createdAt} onChange={(e) => setCreatedAt(e.target.value)} className={inputClass} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">Released</label>
+          <input type="date" value={releasedAt} onChange={(e) => setReleasedAt(e.target.value)} className={`w-full ${inputClass}`} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">Added</label>
+          <input type="date" value={createdAt} onChange={(e) => setCreatedAt(e.target.value)} className={`w-full ${inputClass}`} />
+        </div>
       </div>
 
       <div>

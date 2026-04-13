@@ -60,6 +60,9 @@ const theme = {
   link: "text-blue-600 underline",
 };
 
+const editorNodes = [LinkNode, AutoLinkNode, ListNode, ListItemNode];
+const onError = (error: Error) => console.error(error);
+
 export default function AnnotationEditor({
   initialHtml,
   onSave,
@@ -84,8 +87,8 @@ export default function AnnotationEditor({
   const initialConfig = {
     namespace: "AnnotationEditor",
     theme,
-    nodes: [LinkNode, AutoLinkNode, ListNode, ListItemNode],
-    onError: (error: Error) => console.error(error),
+    nodes: editorNodes,
+    onError,
     ...(initialHtml
       ? {
           editorState: (editor: LexicalEditor) => {

@@ -43,6 +43,7 @@ export const create = mutation({
     font: v.string(),
     accentColor: v.string(),
     imageId: v.optional(v.id("_storage")),
+    releasedAt: v.optional(v.string()),
     createdAt: v.optional(v.number()),
   },
   handler: async (ctx, { createdAt, ...rest }) => {
@@ -61,6 +62,7 @@ export const update = mutation({
     font: v.optional(v.string()),
     accentColor: v.optional(v.string()),
     imageId: v.optional(v.id("_storage")),
+    releasedAt: v.optional(v.string()),
     createdAt: v.optional(v.number()),
   },
   handler: async (ctx, { id, ...fields }) => {
