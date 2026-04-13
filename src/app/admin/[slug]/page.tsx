@@ -59,7 +59,7 @@ export default function AdminEditPage() {
 
   async function handleSaveAnnotation(html: string) {
     if (pendingSelection && post) {
-      await createAnnotation({
+      const newId = await createAnnotation({
         postId: post._id,
         startOffset: pendingSelection.start,
         endOffset: pendingSelection.end,
@@ -67,6 +67,7 @@ export default function AdminEditPage() {
         body: html,
       });
       setPendingSelection(null);
+      setActiveAnnotationId(newId);
     } else if (activeAnnotation) {
       await updateAnnotation({ id: activeAnnotation._id, body: html });
     }
