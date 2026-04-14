@@ -33,6 +33,7 @@ export default function PostForm({
   const [font, setFont] = useState<FontId>((post?.font as FontId) ?? "dm-sans");
   const [accentColor, setAccentColor] = useState(post?.accentColor ?? "#FFFF00");
   const [releasedAt, setReleasedAt] = useState(post?.releasedAt ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(post?.youtubeUrl ?? "");
   const [imagePreview, setImagePreview] = useState<string | null>(post?.imageUrl ?? null);
   const [createdAt, setCreatedAt] = useState(() => {
     const d = post ? new Date(post.createdAt) : new Date();
@@ -46,8 +47,8 @@ export default function PostForm({
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Use refs for form values so autoSave is stable
-  const formRef = useRef({ title, author, type, content, font, accentColor, releasedAt, createdAt });
-  formRef.current = { title, author, type, content, font, accentColor, releasedAt, createdAt };
+  const formRef = useRef({ title, author, type, content, font, accentColor, releasedAt, youtubeUrl, createdAt });
+  formRef.current = { title, author, type, content, font, accentColor, releasedAt, youtubeUrl, createdAt };
 
   const showSaved = useCallback(() => {
     setSaved(true);
@@ -71,6 +72,7 @@ export default function PostForm({
       font: v.font,
       accentColor: v.accentColor,
       releasedAt: v.releasedAt || undefined,
+      youtubeUrl: v.youtubeUrl || undefined,
       createdAt: timestamp,
     });
     setSaving(false);
@@ -88,7 +90,7 @@ export default function PostForm({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [title, author, type, content, font, accentColor, releasedAt, createdAt, isEditing, autoSave]);
+  }, [title, author, type, content, font, accentColor, releasedAt, youtubeUrl, createdAt, isEditing, autoSave]);
 
   // Cleanup blob URLs and timers on unmount
   useEffect(() => {
@@ -144,6 +146,7 @@ export default function PostForm({
       const args: Parameters<typeof createPost>[0] = {
         title, author, type, content, slug, font, accentColor, createdAt: timestamp,
         ...(releasedAt ? { releasedAt } : {}),
+        ...(youtubeUrl ? { youtubeUrl } : {}),
       };
       if (imageId) args.imageId = imageId;
       await createPost(args);
@@ -183,6 +186,16 @@ export default function PostForm({
           <label className="block text-sm font-medium text-black mb-2">Added</label>
           <input type="date" value={createdAt} onChange={(e) => setCreatedAt(e.target.value)} className={`w-full ${inputClass}`} />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-black mb-2">YouTube URL</label>
+        <input
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          className={`w-full ${inputClass}`}
+        />
       </div>
 
       <div>

@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import TextDisplay from "@/components/TextDisplay";
 import AnnotationPanel from "@/components/AnnotationPanel";
+import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
 import { getFontClass } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
 
@@ -111,6 +112,12 @@ export default function PostDetailPage() {
             </p>
           </div>
         ) : null}
+
+        {post.youtubeUrl && (
+          <div className="mb-6">
+            <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
+          </div>
+        )}
 
         <hr className="border-zinc-300 mb-10" />
         <div

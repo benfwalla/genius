@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
+import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
 import { getFontClass } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
 
@@ -154,6 +155,12 @@ export default function AdminEditPage() {
               </p>
             </div>
           ) : null}
+
+          {post.youtubeUrl && (
+            <div className="mb-6">
+              <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
+            </div>
+          )}
 
           <hr className="border-zinc-300 mb-10" />
           <div
