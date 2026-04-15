@@ -3,15 +3,16 @@
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
-import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
+import Header from "@/components/Header";
+import YouTubeAudioPlayer, { type YouTubeAudioPlayerHandle } from "@/components/YouTubeAudioPlayer";
 import { getFontClass, POST_LAYOUT, computeCardPosition } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
-import { FaChevronRight } from "react-icons/fa";
+import { FaPlay, FaPause, FaChevronRight } from "react-icons/fa";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
   ssr: false,
@@ -40,7 +41,22 @@ export default function AdminEditPage() {
   const [caretOffset, setCaretOffset] = useState(40);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubeAudioPlayerHandle>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderScrolled(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [!!post]);
 
   if (!post) return null;
 
@@ -82,7 +98,34 @@ export default function AdminEditPage() {
   const showSidebar = (pendingSelection && editing) || activeAnnotation;
 
   return (
-    <div className={`${POST_LAYOUT.container} py-10`}>
+    <div className="flex flex-col flex-1">
+      <Header
+        scrolledContent={
+          headerScrolled ? (
+            <div className="flex items-center min-w-0 flex-1 gap-3">
+              <div className="hidden md:block w-px h-6 bg-zinc-300 shrink-0" />
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="text-sm font-semibold text-black truncate cursor-pointer min-w-0"
+              >
+                {post.title} – {post.author}
+              </button>
+              {post.youtubeUrl && (
+                <button
+                  type="button"
+                  onClick={() => playerRef.current?.togglePlay()}
+                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-black text-white cursor-pointer"
+                  aria-label="Play/Pause"
+                >
+                  {isPlaying ? <FaPause size={9} /> : <FaPlay size={9} className="ml-px" />}
+                </button>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
+      <div className={`${POST_LAYOUT.container} py-10`}>
       <div className="flex gap-3 mb-8">
         <button
           onClick={() => setTab("annotate")}
@@ -153,10 +196,11 @@ export default function AdminEditPage() {
 
           {post.youtubeUrl && (
             <div className={POST_LAYOUT.playerSection}>
-              <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
+              <YouTubeAudioPlayer ref={playerRef} youtubeUrl={post.youtubeUrl} onPlayingChange={setIsPlaying} />
             </div>
           )}
 
+          <div ref={sentinelRef} />
           <hr className="border-zinc-300 mb-10" />
           <div
             ref={contentRef}
@@ -319,6 +363,7 @@ export default function AdminEditPage() {
           />
         </>
       )}
+    </div>
     </div>
   );
 }
