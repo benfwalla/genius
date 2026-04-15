@@ -114,7 +114,7 @@ export default function PostDetailPage() {
         ) : null}
 
         {post.youtubeUrl && (
-          <div className="mb-6">
+          <div className="mb-6 max-w-sm">
             <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
           </div>
         )}

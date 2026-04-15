@@ -26,6 +26,8 @@ import {
 } from "lexical";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 
+const PROTOCOL_RE = /^https?:\/\//;
+
 function LinkEditor() {
   const [editor] = useLexicalComposerContext();
   const [showInput, setShowInput] = useState(false);
@@ -56,7 +58,7 @@ function LinkEditor() {
   const applyLink = () => {
     const trimmed = url.trim();
     if (trimmed) {
-      const href = /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+      const href = PROTOCOL_RE.test(trimmed) ? trimmed : `https://${trimmed}`;
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, href);
     }
     setShowInput(false);
