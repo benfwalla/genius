@@ -38,4 +38,12 @@ export const POST_LAYOUT = {
   grid: "relative grid grid-cols-1 md:grid-cols-[1fr_440px] gap-10",
   sidebarPosition: "absolute right-0 w-[440px] pl-8",
   playerSection: "mb-6 max-w-md",
+  cardTopOffset: 40,
 } as const;
+
+/** Compute annotation card position and caret offset from a mark element. */
+export function computeCardPosition(markRect: DOMRect, contentRect: DOMRect) {
+  const cardTop = markRect.top - contentRect.top - POST_LAYOUT.cardTopOffset;
+  const markCenter = markRect.top + markRect.height / 2 - contentRect.top;
+  return { cardTop, caretOffset: markCenter - cardTop };
+}

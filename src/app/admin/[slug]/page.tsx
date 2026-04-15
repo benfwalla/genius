@@ -9,8 +9,9 @@ import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
 import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
-import { getFontClass, POST_LAYOUT } from "@/lib/constants";
+import { getFontClass, POST_LAYOUT, computeCardPosition } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
+import { FaChevronRight } from "react-icons/fa";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
   ssr: false,
@@ -36,6 +37,7 @@ export default function AdminEditPage() {
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"annotate" | "edit">("annotate");
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
+  const [caretOffset, setCaretOffset] = useState(40);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -55,8 +57,9 @@ export default function AdminEditPage() {
 
   function computeTop(rect: DOMRect) {
     if (!contentRef.current) return null;
-    const contentRect = contentRef.current.getBoundingClientRect();
-    return rect.top - contentRect.top - 20;
+    const pos = computeCardPosition(rect, contentRef.current.getBoundingClientRect());
+    setCaretOffset(pos.caretOffset);
+    return pos.cardTop;
   }
 
   async function handleSaveAnnotation(html: string) {
@@ -130,15 +133,7 @@ export default function AdminEditPage() {
             onClick={() => setInfoOpen(!infoOpen)}
             className="text-sm text-black mb-6 flex items-center gap-1.5"
           >
-            <svg
-              className={`w-3.5 h-3.5 transition-transform ${infoOpen ? "rotate-90" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <FaChevronRight className={`w-2.5 h-2.5 transition-transform ${infoOpen ? "rotate-90" : ""}`} />
             More information
           </button>
           {infoOpen ? (
@@ -207,7 +202,7 @@ export default function AdminEditPage() {
                 }}
               >
                 {pendingSelection && editing ? (
-                  <div className="rounded-lg border border-zinc-300 p-5 space-y-3">
+                  <div className="annotation-card relative rounded-lg border border-zinc-400 p-5 space-y-3" style={{ "--caret-top": `${caretOffset}px` } as React.CSSProperties}>
                     <p className="text-sm font-semibold text-black">New annotation</p>
                     <AnnotationEditor
                       onSave={handleSaveAnnotation}
@@ -219,7 +214,7 @@ export default function AdminEditPage() {
                     />
                   </div>
                 ) : activeAnnotation ? (
-                  <div className="rounded-lg border border-zinc-300 p-5 space-y-3">
+                  <div className="annotation-card relative rounded-lg border border-zinc-400 p-5 space-y-3" style={{ "--caret-top": `${caretOffset}px` } as React.CSSProperties}>
                     <p className="text-sm font-semibold text-black">Annotation</p>
                     {editing ? (
                       <AnnotationEditor

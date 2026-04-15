@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react";
+import { FaPlay, FaPause } from "react-icons/fa";
 
 declare global {
   interface Window {
@@ -45,7 +46,13 @@ function loadYouTubeAPI(): Promise<void> {
   return apiLoadPromise;
 }
 
-export default function YouTubeAudioPlayer({ youtubeUrl }: { youtubeUrl: string }) {
+export interface YouTubeAudioPlayerHandle {
+  togglePlay: () => void;
+  playing: boolean;
+  ready: boolean;
+}
+
+export default forwardRef<YouTubeAudioPlayerHandle, { youtubeUrl: string; onPlayingChange?: (playing: boolean) => void }>(function YouTubeAudioPlayer({ youtubeUrl, onPlayingChange }, ref) {
   const videoId = extractVideoId(youtubeUrl);
   const playerRef = useRef<YT.Player | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,7 +145,8 @@ export default function YouTubeAudioPlayer({ youtubeUrl }: { youtubeUrl: string 
     } else {
       stopProgressTracking();
     }
-  }, [playing, startProgressTracking, stopProgressTracking]);
+    onPlayingChange?.(playing);
+  }, [playing, startProgressTracking, stopProgressTracking, onPlayingChange]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -156,6 +164,8 @@ export default function YouTubeAudioPlayer({ youtubeUrl }: { youtubeUrl: string 
       p.playVideo();
     }
   }
+
+  useImperativeHandle(ref, () => ({ togglePlay, playing, ready }), [playing, ready]);
 
   function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
     if (!duration || !playerRef.current) return;
@@ -181,19 +191,10 @@ export default function YouTubeAudioPlayer({ youtubeUrl }: { youtubeUrl: string 
       <button
         onClick={togglePlay}
         disabled={!ready}
-        className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black text-white disabled:opacity-30"
+        className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black text-white cursor-pointer disabled:opacity-30 disabled:cursor-default"
         aria-label={playing ? "Pause" : "Play"}
       >
-        {playing ? (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="3" y="2" width="4" height="12" rx="1" />
-            <rect x="9" y="2" width="4" height="12" rx="1" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 2.5v11l9-5.5z" />
-          </svg>
-        )}
+        {playing ? <FaPause size={14} /> : <FaPlay size={14} className="ml-0.5" />}
       </button>
 
       {/* Time */}
@@ -218,4 +219,4 @@ export default function YouTubeAudioPlayer({ youtubeUrl }: { youtubeUrl: string 
       </span>
     </div>
   );
-}
+});

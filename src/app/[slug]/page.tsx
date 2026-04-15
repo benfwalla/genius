@@ -8,9 +8,10 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import TextDisplay from "@/components/TextDisplay";
 import AnnotationPanel from "@/components/AnnotationPanel";
-import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
-import { getFontClass, POST_LAYOUT } from "@/lib/constants";
+import YouTubeAudioPlayer, { type YouTubeAudioPlayerHandle } from "@/components/YouTubeAudioPlayer";
+import { getFontClass, POST_LAYOUT, computeCardPosition } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
+import { FaPlay, FaPause, FaChevronRight } from "react-icons/fa";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
   ssr: false,
@@ -25,8 +26,13 @@ export default function PostDetailPage() {
   );
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
+  const [caretOffset, setCaretOffset] = useState(40);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubeAudioPlayerHandle>(null);
 
   const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
 
@@ -36,21 +42,27 @@ export default function PostDetailPage() {
     history.replaceState(null, "", window.location.pathname);
   }, []);
 
+  const annotationsRef = useRef(annotations);
+  annotationsRef.current = annotations;
+
   const handleAnnotationClick = useCallback(
     (id: string | null, e?: React.MouseEvent) => {
       setActiveAnnotationId(id);
       if (id && e && contentRef.current) {
-        const contentRect = contentRef.current.getBoundingClientRect();
-        const markRect = (e.target as HTMLElement).getBoundingClientRect();
-        setAnnotationTop(markRect.top - contentRect.top - 20);
-        const ann = annotations?.find((a) => a._id === id);
+        const pos = computeCardPosition(
+          (e.target as HTMLElement).getBoundingClientRect(),
+          contentRef.current.getBoundingClientRect()
+        );
+        setAnnotationTop(pos.cardTop);
+        setCaretOffset(pos.caretOffset);
+        const ann = annotationsRef.current?.find((a) => a._id === id);
         if (ann) history.replaceState(null, "", `#${ann.startOffset}`);
       } else {
         setAnnotationTop(null);
         history.replaceState(null, "", window.location.pathname);
       }
     },
-    [annotations]
+    []
   );
 
   // Restore annotation from URL hash on load
@@ -68,10 +80,13 @@ export default function PostDetailPage() {
       const mark = document.querySelector(`[data-annotation-id="${match._id}"]`);
       if (mark && contentRef.current) {
         mark.scrollIntoView({ behavior: "smooth", block: "center" });
-        const contentRect = contentRef.current.getBoundingClientRect();
-        const markRect = mark.getBoundingClientRect();
+        const pos = computeCardPosition(
+          mark.getBoundingClientRect(),
+          contentRef.current.getBoundingClientRect()
+        );
         setActiveAnnotationId(match._id);
-        setAnnotationTop(markRect.top - contentRect.top - 20);
+        setAnnotationTop(pos.cardTop);
+        setCaretOffset(pos.caretOffset);
       }
     });
   }, [annotations]);
@@ -80,14 +95,50 @@ export default function PostDetailPage() {
     if (post?.title) document.title = `${post.title} - ${post.author} | genius.ben-mini`;
   }, [post?.title, post?.author]);
 
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderScrolled(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [!!post]);
+
   if (!post) return null;
 
   const fontClass = getFontClass(post.font);
 
   return (
     <div className="flex flex-col flex-1">
-      <Header />
-      <main className={`${POST_LAYOUT.container} w-full pt-10 pb-32`}>
+      <Header
+        scrolledContent={
+          headerScrolled ? (
+            <div className="flex items-center min-w-0 flex-1 gap-3">
+              <div className="hidden md:block w-px h-6 bg-zinc-300 shrink-0" />
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="text-sm font-semibold text-black truncate cursor-pointer min-w-0"
+              >
+                {post.title} – {post.author}
+              </button>
+              {post.youtubeUrl && (
+                <button
+                  type="button"
+                  onClick={() => playerRef.current?.togglePlay()}
+                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-black text-white cursor-pointer"
+                  aria-label="Play/Pause"
+                >
+                  {isPlaying ? <FaPause size={9} /> : <FaPlay size={9} className="ml-px" />}
+                </button>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
+      <main className={`${POST_LAYOUT.container} w-full pt-10 pb-128`}>
         <div className="flex items-start gap-6 mb-6">
           {post.imageUrl && (
             <img
@@ -111,15 +162,7 @@ export default function PostDetailPage() {
           onClick={() => setInfoOpen(!infoOpen)}
           className="text-sm text-black mb-6 flex items-center gap-1.5"
         >
-          <svg
-            className={`w-3.5 h-3.5 transition-transform ${infoOpen ? "rotate-90" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          <FaChevronRight className={`w-2.5 h-2.5 transition-transform ${infoOpen ? "rotate-90" : ""}`} />
           More information
         </button>
         {infoOpen ? (
@@ -139,10 +182,11 @@ export default function PostDetailPage() {
 
         {post.youtubeUrl && (
           <div className={POST_LAYOUT.playerSection}>
-            <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
+            <YouTubeAudioPlayer ref={playerRef} youtubeUrl={post.youtubeUrl} onPlayingChange={setIsPlaying} />
           </div>
         )}
 
+        <div ref={sentinelRef} />
         <hr className="border-zinc-300 mb-10" />
         <div
           ref={contentRef}
@@ -175,7 +219,7 @@ export default function PostDetailPage() {
                 pointerEvents: activeAnnotation ? "auto" : "none",
               }}
             >
-              <AnnotationPanel annotation={activeAnnotation} />
+              <AnnotationPanel annotation={activeAnnotation} caretOffset={caretOffset} />
             </div>
           </aside>
         </div>

@@ -73,6 +73,22 @@ mark {
   margin: 0 0 0.75em;
 }
 
+/* Annotation card caret pointing left toward the lyrics (desktop only) */
+@media (min-width: 768px) {
+  .annotation-card::before {
+    content: "";
+    position: absolute;
+    left: -9.5px;
+    top: var(--caret-top, 28px);
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-left: 1px solid #a1a1aa;
+    border-bottom: 1px solid #a1a1aa;
+    transform: translateY(-50%) rotate(45deg);
+  }
+}
+
 /* Annotation body (view state) */
 .annotation-body p {
   margin: 0 0 0.75em;
