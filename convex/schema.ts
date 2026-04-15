@@ -11,6 +11,7 @@ export default defineSchema({
     font: v.string(),
     accentColor: v.string(),
     imageId: v.optional(v.id("_storage")),
+    youtubeUrl: v.optional(v.string()),
     releasedAt: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]),
