@@ -65,11 +65,12 @@ export default function PostDetailPage() {
     []
   );
 
-  // Restore annotation from URL hash on load
+  // Restore annotation from URL hash — only on direct/shared links, not in-app navigation
+  const initialHash = useRef(window.location.hash.slice(1));
   const restoredRef = useRef(false);
   useEffect(() => {
     if (restoredRef.current || !annotations?.length) return;
-    const hash = window.location.hash.slice(1);
+    const hash = initialHash.current;
     if (!hash) return;
     const offset = Number(hash);
     if (Number.isNaN(offset)) return;
