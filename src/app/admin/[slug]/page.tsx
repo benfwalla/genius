@@ -8,7 +8,6 @@ import dynamic from "next/dynamic";
 import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
-import Header from "@/components/Header";
 import YouTubeAudioPlayer, { type YouTubeAudioPlayerHandle } from "@/components/YouTubeAudioPlayer";
 import { getFontClass, POST_LAYOUT, computeCardPosition } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
@@ -58,6 +57,10 @@ export default function AdminEditPage() {
     return () => observer.disconnect();
   }, [!!post]);
 
+  useEffect(() => {
+    if (post?.title) document.title = `${post.title} - ${post.author} | genius.ben-mini`;
+  }, [post?.title, post?.author]);
+
   if (!post) return null;
 
   const fontClass = getFontClass(post.font);
@@ -98,33 +101,30 @@ export default function AdminEditPage() {
   const showSidebar = (pendingSelection && editing) || activeAnnotation;
 
   return (
-    <div className="flex flex-col flex-1">
-      <Header
-        scrolledContent={
-          headerScrolled ? (
-            <div className="flex items-center min-w-0 flex-1 gap-3">
-              <div className="hidden md:block w-px h-6 bg-zinc-300 shrink-0" />
+    <>
+      {headerScrolled && (
+        <div className="sticky top-0 z-30 bg-white border-b border-zinc-300 px-4 md:px-6 py-3">
+          <div className="flex items-center gap-3 max-w-5xl mx-auto">
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="text-sm font-semibold text-black truncate cursor-pointer min-w-0"
+            >
+              {post.title} – {post.author}
+            </button>
+            {post.youtubeUrl && (
               <button
                 type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                className="text-sm font-semibold text-black truncate cursor-pointer min-w-0"
+                onClick={() => playerRef.current?.togglePlay()}
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-black text-white cursor-pointer"
+                aria-label="Play/Pause"
               >
-                {post.title} – {post.author}
+                {isPlaying ? <FaPause size={9} /> : <FaPlay size={9} className="ml-px" />}
               </button>
-              {post.youtubeUrl && (
-                <button
-                  type="button"
-                  onClick={() => playerRef.current?.togglePlay()}
-                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-black text-white cursor-pointer"
-                  aria-label="Play/Pause"
-                >
-                  {isPlaying ? <FaPause size={9} /> : <FaPlay size={9} className="ml-px" />}
-                </button>
-              )}
-            </div>
-          ) : undefined
-        }
-      />
+            )}
+          </div>
+        </div>
+      )}
       <div className={`${POST_LAYOUT.container} py-10`}>
       <div className="flex gap-3 mb-8">
         <button
@@ -364,6 +364,6 @@ export default function AdminEditPage() {
         </>
       )}
     </div>
-    </div>
+    </>
   );
 }
