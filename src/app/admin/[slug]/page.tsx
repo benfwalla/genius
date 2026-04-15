@@ -9,7 +9,7 @@ import PostForm from "@/components/PostForm";
 import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
 import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
-import { getFontClass } from "@/lib/constants";
+import { getFontClass, POST_LAYOUT } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
@@ -79,7 +79,7 @@ export default function AdminEditPage() {
   const showSidebar = (pendingSelection && editing) || activeAnnotation;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className={`${POST_LAYOUT.container} py-10`}>
       <div className="flex gap-3 mb-8">
         <button
           onClick={() => setTab("annotate")}
@@ -157,7 +157,7 @@ export default function AdminEditPage() {
           ) : null}
 
           {post.youtubeUrl && (
-            <div className="mb-6 max-w-md">
+            <div className={POST_LAYOUT.playerSection}>
               <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
             </div>
           )}
@@ -165,7 +165,7 @@ export default function AdminEditPage() {
           <hr className="border-zinc-300 mb-10" />
           <div
             ref={contentRef}
-            className="relative grid grid-cols-1 md:grid-cols-[1fr_440px] gap-10"
+            className={POST_LAYOUT.grid}
           >
             <div>
               <TextSelector
@@ -199,7 +199,7 @@ export default function AdminEditPage() {
 
             <aside className="hidden md:block">
               <div
-                className="absolute right-0 w-[440px] pl-8"
+                className={POST_LAYOUT.sidebarPosition}
                 style={{
                   top: annotationTop != null ? `${Math.max(0, annotationTop)}px` : "0px",
                   opacity: showSidebar ? 1 : 0,

@@ -31,3 +31,11 @@ export type PostType = (typeof POST_TYPES)[number];
 export function getFontClass(fontId: string): string {
   return FONTS.find((f) => f.id === fontId)?.className ?? "";
 }
+
+/** Shared layout values for public and admin post pages (keep in sync). */
+export const POST_LAYOUT = {
+  container: "max-w-5xl mx-auto px-6",
+  grid: "relative grid grid-cols-1 md:grid-cols-[1fr_440px] gap-10",
+  sidebarPosition: "absolute right-0 w-[440px] pl-8",
+  playerSection: "mb-6 max-w-md",
+} as const;

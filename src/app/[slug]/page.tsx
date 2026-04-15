@@ -3,13 +3,13 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import TextDisplay from "@/components/TextDisplay";
 import AnnotationPanel from "@/components/AnnotationPanel";
 import YouTubeAudioPlayer from "@/components/YouTubeAudioPlayer";
-import { getFontClass } from "@/lib/constants";
+import { getFontClass, POST_LAYOUT } from "@/lib/constants";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
 
 const BottomDrawer = dynamic(() => import("@/components/BottomDrawer"), {
@@ -49,6 +49,10 @@ export default function PostDetailPage() {
     []
   );
 
+  useEffect(() => {
+    if (post?.title) document.title = `${post.title} - ${post.author} | genius.ben-mini`;
+  }, [post?.title, post?.author]);
+
   if (!post) return null;
 
   const fontClass = getFontClass(post.font);
@@ -56,7 +60,7 @@ export default function PostDetailPage() {
   return (
     <div className="flex flex-col flex-1">
       <Header />
-      <main className="max-w-4xl mx-auto w-full px-6 pt-10 pb-32">
+      <main className={`${POST_LAYOUT.container} w-full pt-10 pb-32`}>
         <div className="flex items-start gap-6 mb-6">
           {post.imageUrl && (
             <img
@@ -76,7 +80,6 @@ export default function PostDetailPage() {
           </div>
         </div>
 
-        {/* More Information toggle */}
         <button
           onClick={() => setInfoOpen(!infoOpen)}
           className="text-sm text-black mb-6 flex items-center gap-1.5"
@@ -108,7 +111,7 @@ export default function PostDetailPage() {
         ) : null}
 
         {post.youtubeUrl && (
-          <div className="mb-6 max-w-md">
+          <div className={POST_LAYOUT.playerSection}>
             <YouTubeAudioPlayer youtubeUrl={post.youtubeUrl} />
           </div>
         )}
@@ -116,7 +119,7 @@ export default function PostDetailPage() {
         <hr className="border-zinc-300 mb-10" />
         <div
           ref={contentRef}
-          className="relative grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8"
+          className={POST_LAYOUT.grid}
         >
           <div
             onClick={(e) => {
@@ -138,7 +141,7 @@ export default function PostDetailPage() {
           {/* Desktop sidebar */}
           <aside className="hidden md:block">
             <div
-              className="absolute right-0 w-[320px] pl-6"
+              className={POST_LAYOUT.sidebarPosition}
               style={{
                 top: annotationTop != null ? `${Math.max(0, annotationTop)}px` : "0px",
                 opacity: activeAnnotation ? 1 : 0,
