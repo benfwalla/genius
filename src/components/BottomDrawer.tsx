@@ -78,7 +78,7 @@ export default function BottomDrawer({
 
               {/* Annotation body */}
               <div
-                className="prose prose-base prose-black max-w-none leading-relaxed"
+                className="prose prose-base prose-black max-w-none leading-relaxed annotation-body"
                 dangerouslySetInnerHTML={{ __html: annotation.body }}
               />
 

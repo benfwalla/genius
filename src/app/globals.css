@@ -28,10 +28,73 @@ mark {
 }
 
 .lexical-editor p {
-  margin: 0 0 0.5em;
+  margin: 0 0 0.75em;
+}
+
+.lexical-editor p:last-child {
+  margin-bottom: 0;
+}
+
+/* Remove top margin on lists that follow paragraphs — the paragraph's bottom margin is enough */
+.lexical-editor p + ul,
+.lexical-editor p + ol {
+  margin-top: 0;
+}
+
+/* Lists: no extra space between sibling items */
+.lexical-editor ul,
+.lexical-editor ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.lexical-editor li {
+  margin: 0;
 }
 
 .lexical-editor a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Blockquote in editor */
+.annotation-blockquote {
+  border-left: 3px solid black;
+  padding-left: 0.75em;
+  margin: 0 0 0.75em;
+}
+
+/* Annotation body rendered in prose containers (view state) */
+.annotation-body p {
+  margin: 0 0 0.75em;
+}
+
+.annotation-body p:last-child {
+  margin-bottom: 0;
+}
+
+.annotation-body p + ul,
+.annotation-body p + ol {
+  margin-top: 0;
+}
+
+.annotation-body ul,
+.annotation-body ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.annotation-body li {
+  margin: 0;
+}
+
+.annotation-body blockquote {
+  border-left: 3px solid black;
+  padding-left: 0.75em;
+  margin: 0 0 0.75em;
+}
+
+.annotation-body a {
   color: #2563eb;
   text-decoration: underline;
 }
