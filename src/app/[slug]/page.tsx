@@ -49,13 +49,7 @@ export default function PostDetailPage() {
     []
   );
 
-  if (!post) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-base text-black">
-        Loading...
-      </div>
-    );
-  }
+  if (!post) return null;
 
   const fontClass = getFontClass(post.font);
 

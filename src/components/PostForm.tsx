@@ -170,7 +170,7 @@ export default function PostForm({
       <div className="grid grid-cols-2 gap-4">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required className={`col-span-2 ${inputClass}`} />
         <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author" required className={inputClass} />
-        <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
+        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputClass} pr-10`}>
           {POST_TYPES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}

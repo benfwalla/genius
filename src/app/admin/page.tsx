@@ -21,9 +21,7 @@ export default function AdminDashboard() {
           + New
         </Link>
       </div>
-      {!posts ? (
-        <p className="text-base">Loading...</p>
-      ) : posts.length === 0 ? (
+      {!posts ? null : posts.length === 0 ? (
         <p className="text-base">No posts yet. Create your first one.</p>
       ) : (
         <div className="space-y-3">

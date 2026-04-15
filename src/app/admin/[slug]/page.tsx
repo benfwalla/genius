@@ -40,7 +40,7 @@ export default function AdminEditPage() {
   const [infoOpen, setInfoOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  if (!post) return <div className="p-6 text-base">Loading...</div>;
+  if (!post) return null;
 
   const fontClass = getFontClass(post.font);
   const activeAnnotation = annotations?.find((a) => a._id === activeAnnotationId) ?? null;
