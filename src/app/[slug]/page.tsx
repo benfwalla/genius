@@ -33,6 +33,7 @@ export default function PostDetailPage() {
   const handleClose = useCallback(() => {
     setActiveAnnotationId(null);
     setAnnotationTop(null);
+    history.replaceState(null, "", window.location.pathname);
   }, []);
 
   const handleAnnotationClick = useCallback(
@@ -42,12 +43,38 @@ export default function PostDetailPage() {
         const contentRect = contentRef.current.getBoundingClientRect();
         const markRect = (e.target as HTMLElement).getBoundingClientRect();
         setAnnotationTop(markRect.top - contentRect.top - 20);
+        const ann = annotations?.find((a) => a._id === id);
+        if (ann) history.replaceState(null, "", `#${ann.startOffset}`);
       } else {
         setAnnotationTop(null);
+        history.replaceState(null, "", window.location.pathname);
       }
     },
-    []
+    [annotations]
   );
+
+  // Restore annotation from URL hash on load
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !annotations?.length) return;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const offset = Number(hash);
+    if (Number.isNaN(offset)) return;
+    const match = annotations.find((a) => a.startOffset === offset);
+    if (!match) return;
+    restoredRef.current = true;
+    requestAnimationFrame(() => {
+      const mark = document.querySelector(`[data-annotation-id="${match._id}"]`);
+      if (mark && contentRef.current) {
+        mark.scrollIntoView({ behavior: "smooth", block: "center" });
+        const contentRect = contentRef.current.getBoundingClientRect();
+        const markRect = mark.getBoundingClientRect();
+        setActiveAnnotationId(match._id);
+        setAnnotationTop(markRect.top - contentRect.top - 20);
+      }
+    });
+  }, [annotations]);
 
   useEffect(() => {
     if (post?.title) document.title = `${post.title} - ${post.author} | genius.ben-mini`;

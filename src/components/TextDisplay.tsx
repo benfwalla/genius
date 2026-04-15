@@ -87,6 +87,7 @@ export default function TextDisplay({
         ) : seg.annotation ? (
           <mark
             key={i}
+            data-annotation-id={seg.annotation._id}
             style={{
               backgroundColor: activeAnnotationId === seg.annotation._id
                 ? accentColor

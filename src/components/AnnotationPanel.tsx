@@ -13,7 +13,7 @@ export default function AnnotationPanel({
     <div className="rounded-lg border border-zinc-300 p-5 space-y-3">
       <p className="text-sm font-semibold text-black">Annotation</p>
       <div
-        className="prose prose-base prose-black max-w-none leading-relaxed annotation-body"
+        className="text-base text-black leading-relaxed annotation-body"
         dangerouslySetInnerHTML={{ __html: annotation.body }}
       />
     </div>

@@ -11,6 +11,8 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkNode, AutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { QuoteNode } from "@lexical/rich-text";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { UNORDERED_LIST, ORDERED_LIST, QUOTE, BOLD_STAR, ITALIC_STAR } from "@lexical/markdown";
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $setBlocksType } from "@lexical/selection";
@@ -28,115 +30,151 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 
 const PROTOCOL_RE = /^https?:\/\//;
 
-function LinkEditor() {
+function FloatingToolbar() {
   const [editor] = useLexicalComposerContext();
-  const [showInput, setShowInput] = useState(false);
-  const [url, setUrl] = useState("");
-  const [isEditingExisting, setIsEditingExisting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [linkMode, setLinkMode] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [isExistingLink, setIsExistingLink] = useState(false);
 
-  const openLinkInput = () => {
+  useEffect(() => {
+    const update = () => {
+      editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection) || selection.isCollapsed()) {
+          if (!linkMode) setVisible(false);
+          return;
+        }
+        const nativeSelection = window.getSelection();
+        if (!nativeSelection || nativeSelection.rangeCount === 0) return;
+        const range = nativeSelection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const editorEl = editor.getRootElement();
+        if (!editorEl) return;
+        const editorRect = editorEl.getBoundingClientRect();
+        setPosition({
+          top: rect.top - editorRect.top - 44,
+          left: rect.left - editorRect.left + rect.width / 2,
+        });
+        setVisible(true);
+      });
+    };
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(update);
+    });
+  }, [editor, linkMode]);
+
+  useEffect(() => {
+    if (linkMode && linkInputRef.current) linkInputRef.current.focus();
+  }, [linkMode]);
+
+  const openLink = () => {
     editor.getEditorState().read(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
       const node = selection.getNodes()[0]?.getParent();
       if ($isLinkNode(node)) {
-        setUrl(node.getURL());
-        setIsEditingExisting(true);
+        setLinkUrl(node.getURL());
+        setIsExistingLink(true);
       } else {
-        setUrl("");
-        setIsEditingExisting(false);
+        setLinkUrl("");
+        setIsExistingLink(false);
       }
     });
-    setShowInput(true);
+    setLinkMode(true);
   };
 
-  useEffect(() => {
-    if (showInput && inputRef.current) inputRef.current.focus();
-  }, [showInput]);
-
   const applyLink = () => {
-    const trimmed = url.trim();
+    const trimmed = linkUrl.trim();
     if (trimmed) {
       const href = PROTOCOL_RE.test(trimmed) ? trimmed : `https://${trimmed}`;
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, href);
     }
-    setShowInput(false);
-    setUrl("");
+    setLinkMode(false);
+    setLinkUrl("");
   };
 
   const removeLink = () => {
     editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-    setShowInput(false);
-    setUrl("");
+    setLinkMode(false);
+    setLinkUrl("");
   };
 
-  return { showInput, setShowInput, url, setUrl, openLinkInput, applyLink, removeLink, isEditingExisting, inputRef };
-}
+  if (!visible) return null;
 
-function Toolbar() {
-  const [editor] = useLexicalComposerContext();
-  const link = LinkEditor();
-
-  const formatBold = () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-  const formatItalic = () =>
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-  const toggleBlockquote = () => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if (!$isRangeSelection(selection)) return;
-      const anchorNode = selection.anchor.getNode();
-      const parentBlock = anchorNode.getTopLevelElement();
-      if (parentBlock && parentBlock.getType() === "quote") {
-        $setBlocksType(selection, () => $createParagraphNode());
-      } else {
-        $setBlocksType(selection, () => new QuoteNode());
-      }
-    });
-  };
-
-  const btnClass =
-    "px-3 py-2 text-sm rounded-lg border border-zinc-400";
+  const btnClass = "px-2.5 py-1.5 text-sm text-white rounded";
 
   return (
-    <div className="space-y-2 mb-3 pb-3 border-b border-zinc-300">
-      <div className="flex gap-2">
-        <button type="button" onClick={formatBold} className={`${btnClass} font-bold`}>
-          B
-        </button>
-        <button type="button" onClick={formatItalic} className={`${btnClass} italic`}>
-          I
-        </button>
-        <button type="button" onClick={link.openLinkInput} className={btnClass}>
-          Link
-        </button>
-        <button type="button" onClick={toggleBlockquote} className={btnClass}>
-          &ldquo;
-        </button>
-      </div>
-      {link.showInput && (
-        <div className="flex gap-2 items-center">
+    <div
+      ref={toolbarRef}
+      className="absolute z-50 flex items-center gap-0.5 bg-black rounded-lg px-1 py-1 shadow-lg"
+      style={{
+        top: position.top,
+        left: position.left,
+        transform: "translateX(-50%)",
+      }}
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      {linkMode ? (
+        <div className="flex items-center gap-1 px-1">
           <input
-            ref={link.inputRef}
+            ref={linkInputRef}
             type="text"
-            value={link.url}
-            onChange={(e) => link.setUrl(e.target.value)}
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); link.applyLink(); }
-              if (e.key === "Escape") { link.setShowInput(false); link.setUrl(""); }
+              if (e.key === "Enter") { e.preventDefault(); applyLink(); }
+              if (e.key === "Escape") { setLinkMode(false); setLinkUrl(""); }
             }}
-            placeholder="https://example.com"
-            className="flex-1 rounded-lg border border-zinc-400 px-3 py-1.5 text-sm text-black focus:border-black focus:outline-none"
+            placeholder="Paste link..."
+            className="w-48 bg-zinc-800 text-white text-sm rounded px-2 py-1 placeholder-zinc-400 focus:outline-none"
           />
-          <button type="button" onClick={link.applyLink} className="rounded-lg bg-black px-3 py-1.5 text-sm text-white">
-            Apply
+          <button type="button" onClick={applyLink} className="text-sm text-white px-2 py-1 rounded bg-zinc-700">
+            ✓
           </button>
-          {link.isEditingExisting && (
-            <button type="button" onClick={link.removeLink} className="rounded-lg border border-red-400 px-3 py-1.5 text-sm text-red-600">
-              Remove
+          {isExistingLink && (
+            <button type="button" onClick={removeLink} className="text-sm text-red-400 px-2 py-1 rounded bg-zinc-700">
+              ✕
             </button>
           )}
         </div>
+      ) : (
+        <>
+          <button type="button" onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")} className={`${btnClass} font-bold`}>
+            B
+          </button>
+          <button type="button" onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")} className={`${btnClass} italic`}>
+            I
+          </button>
+          <button type="button" onClick={openLink} className={btnClass}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              editor.update(() => {
+                const selection = $getSelection();
+                if (!$isRangeSelection(selection)) return;
+                const anchorNode = selection.anchor.getNode();
+                const parentBlock = anchorNode.getTopLevelElement();
+                if (parentBlock && parentBlock.getType() === "quote") {
+                  $setBlocksType(selection, () => $createParagraphNode());
+                } else {
+                  $setBlocksType(selection, () => new QuoteNode());
+                }
+              });
+            }}
+            className={btnClass}
+          >
+            &gt;
+          </button>
+        </>
       )}
     </div>
   );
@@ -198,8 +236,8 @@ export default function AnnotationEditor({
   return (
     <div className="space-y-4">
       <LexicalComposer initialConfig={initialConfig}>
-        <Toolbar />
         <div className="relative">
+          <FloatingToolbar />
           <RichTextPlugin
             contentEditable={
               <ContentEditable className="lexical-editor rounded-lg border border-zinc-400 px-4 py-3 text-base text-black focus:border-black focus:outline-none min-h-[240px]" />
@@ -215,6 +253,7 @@ export default function AnnotationEditor({
         <HistoryPlugin />
         <LinkPlugin />
         <ListPlugin />
+        <MarkdownShortcutPlugin transformers={[UNORDERED_LIST, ORDERED_LIST, QUOTE, BOLD_STAR, ITALIC_STAR]} />
         <OnChangePlugin onChange={handleChange} />
       </LexicalComposer>
       <div className="flex gap-3">

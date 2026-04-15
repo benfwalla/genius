@@ -231,7 +231,7 @@ export default function AdminEditPage() {
                     ) : (
                       <>
                         <div
-                          className="prose prose-base prose-black max-w-none leading-relaxed annotation-body"
+                          className="text-base text-black leading-relaxed annotation-body"
                           dangerouslySetInnerHTML={{ __html: activeAnnotation.body }}
                         />
                         <div className="flex gap-4 pt-2">

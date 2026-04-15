@@ -46,9 +46,18 @@ mark {
 .lexical-editor ol {
   margin: 0 0 0.75em;
   padding-left: 1.5em;
+  list-style: disc;
+}
+
+.lexical-editor ol {
+  list-style: decimal;
 }
 
 .lexical-editor li {
+  margin: 0;
+}
+
+.lexical-editor li p {
   margin: 0;
 }
 
@@ -64,7 +73,7 @@ mark {
   margin: 0 0 0.75em;
 }
 
-/* Annotation body rendered in prose containers (view state) */
+/* Annotation body (view state) */
 .annotation-body p {
   margin: 0 0 0.75em;
 }
@@ -73,24 +82,24 @@ mark {
   margin-bottom: 0;
 }
 
-.annotation-body p + ul,
-.annotation-body p + ol {
-  margin-top: 0;
-}
-
 .annotation-body ul,
 .annotation-body ol {
-  margin: 0 0 0.75em !important;
-  padding-left: 1.5em !important;
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+  list-style: disc;
+}
+
+.annotation-body ol {
+  list-style: decimal;
 }
 
 .annotation-body li {
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
 }
 
-.annotation-body :where(ul, ol) > li > :where(ul, ol) {
-  margin-top: 0 !important;
+.annotation-body li p {
+  margin: 0;
 }
 
 .annotation-body blockquote {
