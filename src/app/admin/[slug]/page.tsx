@@ -174,7 +174,7 @@ export default function AdminEditPage() {
 
           <button
             onClick={() => setInfoOpen(!infoOpen)}
-            className="text-sm text-black mb-6 flex items-center gap-1.5"
+            className="text-sm text-black mb-6 flex items-center gap-1.5 cursor-pointer"
           >
             <FaChevronRight className={`w-2.5 h-2.5 transition-transform ${infoOpen ? "rotate-90" : ""}`} />
             More information

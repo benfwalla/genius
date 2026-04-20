@@ -11,34 +11,41 @@ export default function HomePage() {
   return (
     <div className="flex flex-col flex-1">
       <Header />
-      <main className="max-w-2xl mx-auto w-full px-6 py-10">
-        {!posts ? (
-          <p className="text-base">Loading...</p>
-        ) : posts.length === 0 ? (
+      <main className="max-w-5xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
+        {posts && posts.length === 0 ? (
           <p className="text-base">Nothing here yet.</p>
-        ) : (
-          <div className="space-y-3">
+        ) : posts && posts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-8">
             {posts.map((post) => (
               <Link
                 key={post._id}
                 href={`/${post.slug}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-300 px-5 py-4 hover:border-black transition-colors"
+                className="flex flex-col cursor-pointer"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="w-full aspect-square rounded-lg border border-zinc-300 overflow-hidden bg-zinc-100">
                   {post.imageUrl && (
-                    <img src={post.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                    />
                   )}
-                  <div className="min-w-0">
-                    <p className="text-base font-medium truncate">{post.title}</p>
-                    <p className="text-sm text-black">
-                      {post.author} &middot; {post.type}
-                    </p>
-                  </div>
+                </div>
+                <div className="mt-3 md:mt-4">
+                  <h2 className="text-lg md:text-2xl font-bold tracking-tight leading-[1.1] text-balance">
+                    {post.title}
+                  </h2>
+                  <p className="text-sm md:text-base text-black mt-1.5 flex items-center flex-wrap gap-x-2 gap-y-1">
+                    <span>{post.author}</span>
+                    <span className="inline-block text-[10px] md:text-xs font-medium border border-zinc-400 rounded-full px-2 py-0.5 align-middle">
+                      {post.type}
+                    </span>
+                  </p>
                 </div>
               </Link>
             ))}
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
