@@ -3,6 +3,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import type { Doc } from "../../convex/_generated/dataModel";
 import TextDisplay from "./TextDisplay";
+import { rangesOverlap, type Range } from "@/lib/annotations";
 
 function getTextOffset(container: HTMLElement, node: Node, offset: number): number {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -25,65 +26,74 @@ export default function TextSelector({
   onSelect,
   onClickOut,
   fontClass,
-  pendingRange,
+  pendingRanges,
 }: {
   content: string;
   annotations: Doc<"annotations">[];
   accentColor: string;
   activeAnnotationId?: string;
   onAnnotationClick?: (id: string | null, e?: React.MouseEvent) => void;
-  onSelect?: (start: number, end: number, text: string, rect?: DOMRect) => void;
+  onSelect?: (range: Range, append: boolean, rect?: DOMRect) => void;
   onClickOut?: () => void;
   fontClass?: string;
-  pendingRange?: { start: number; end: number };
+  pendingRanges?: Range[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const justSelectedRef = useRef(false);
+  // Read pendingRanges via ref so the mouseup listener doesn't re-subscribe on every append.
+  const pendingRangesRef = useRef(pendingRanges);
+  pendingRangesRef.current = pendingRanges;
 
-  const handleSelection = useCallback(() => {
-    if (!onSelect || !containerRef.current) return;
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const handleSelection = useCallback(
+    (append: boolean) => {
+      if (!onSelect || !containerRef.current) return;
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
 
-    const range = sel.getRangeAt(0);
-    if (
-      !containerRef.current.contains(range.startContainer) &&
-      !containerRef.current.contains(range.endContainer)
-    ) return;
+      const range = sel.getRangeAt(0);
+      if (
+        !containerRef.current.contains(range.startContainer) &&
+        !containerRef.current.contains(range.endContainer)
+      ) return;
 
-    const start = getTextOffset(containerRef.current, range.startContainer, range.startOffset);
-    const end = getTextOffset(containerRef.current, range.endContainer, range.endOffset);
+      const start = getTextOffset(containerRef.current, range.startContainer, range.startOffset);
+      const end = getTextOffset(containerRef.current, range.endContainer, range.endOffset);
 
-    if (start === end) return;
+      if (start === end) return;
 
-    const [lo, hi] = start < end ? [start, end] : [end, start];
-    const clampedLo = Math.max(0, lo);
-    const clampedHi = Math.min(content.length, hi);
-    if (clampedLo >= clampedHi) return;
+      const [lo, hi] = start < end ? [start, end] : [end, start];
+      const clampedLo = Math.max(0, lo);
+      const clampedHi = Math.min(content.length, hi);
+      if (clampedLo >= clampedHi) return;
 
-    const text = content.slice(clampedLo, clampedHi);
+      const newRange: Range = { start: clampedLo, end: clampedHi };
 
-    const overlaps = annotations.some(
-      (a) => clampedLo < a.endOffset && clampedHi > a.startOffset
-    );
-    if (overlaps) {
-      alert("This selection overlaps an existing annotation. Remove it first.");
+      const overlapsAnnotation = annotations.some((a) =>
+        a.ranges.some((r) => rangesOverlap(r, newRange))
+      );
+      const overlapsPending =
+        append && (pendingRangesRef.current ?? []).some((r) => rangesOverlap(r, newRange));
+      if (overlapsAnnotation || overlapsPending) {
+        alert("This selection overlaps an existing annotation. Remove it first.");
+        sel.removeAllRanges();
+        return;
+      }
+
+      const rangeRect = range.getBoundingClientRect();
+      justSelectedRef.current = true;
+      onSelect(newRange, append, rangeRect);
       sel.removeAllRanges();
-      return;
-    }
-
-    const rangeRect = range.getBoundingClientRect();
-    justSelectedRef.current = true;
-    onSelect(clampedLo, clampedHi, text, rangeRect);
-    sel.removeAllRanges();
-  }, [content, annotations, onSelect]);
+    },
+    [content, annotations, onSelect]
+  );
 
   useEffect(() => {
-    function onMouseUp() {
+    function onMouseUp(e: MouseEvent) {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
-        handleSelection();
+        const append = e.metaKey || e.ctrlKey;
+        handleSelection(append);
       }
     }
     document.addEventListener("mouseup", onMouseUp);
@@ -123,7 +133,7 @@ export default function TextSelector({
         activeAnnotationId={activeAnnotationId}
         onAnnotationClick={onAnnotationClick}
         fontClass={fontClass}
-        pendingRange={pendingRange}
+        pendingRanges={pendingRanges}
       />
     </div>
   );

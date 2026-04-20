@@ -10,6 +10,7 @@ import TextSelector from "@/components/TextSelector";
 import AnnotationEditor from "@/components/AnnotationEditor";
 import YouTubeAudioPlayer, { type YouTubeAudioPlayerHandle } from "@/components/YouTubeAudioPlayer";
 import { getFontClass, POST_LAYOUT, computeCardPosition } from "@/lib/constants";
+import { anchorTextFromRanges, type Range } from "@/lib/annotations";
 import { formatDate, formatReleaseDate } from "@/lib/dates";
 import { FaPlay, FaPause, FaChevronRight } from "react-icons/fa";
 
@@ -29,11 +30,7 @@ export default function AdminEditPage() {
   const removeAnnotation = useMutation(api.annotations.remove);
 
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
-  const [pendingSelection, setPendingSelection] = useState<{
-    start: number;
-    end: number;
-    text: string;
-  } | null>(null);
+  const [pendingRanges, setPendingRanges] = useState<Range[]>([]);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"annotate" | "edit">("annotate");
   const [annotationTop, setAnnotationTop] = useState<number | null>(null);
@@ -68,7 +65,7 @@ export default function AdminEditPage() {
 
   function clearSelection() {
     setActiveAnnotationId(null);
-    setPendingSelection(null);
+    setPendingRanges([]);
     setEditing(false);
     setAnnotationTop(null);
     setConfirmingDelete(false);
@@ -82,15 +79,14 @@ export default function AdminEditPage() {
   }
 
   async function handleSaveAnnotation(html: string) {
-    if (pendingSelection && post) {
+    if (pendingRanges.length > 0 && post) {
       const newId = await createAnnotation({
         postId: post._id,
-        startOffset: pendingSelection.start,
-        endOffset: pendingSelection.end,
-        anchorText: pendingSelection.text,
+        ranges: pendingRanges,
+        anchorText: anchorTextFromRanges(post.content, pendingRanges),
         body: html,
       });
-      setPendingSelection(null);
+      setPendingRanges([]);
       setActiveAnnotationId(newId);
     } else if (activeAnnotation) {
       await updateAnnotation({ id: activeAnnotation._id, body: html });
@@ -98,7 +94,7 @@ export default function AdminEditPage() {
     setEditing(false);
   }
 
-  const showSidebar = (pendingSelection && editing) || activeAnnotation;
+  const showSidebar = (pendingRanges.length > 0 && editing) || activeAnnotation;
 
   return (
     <>
@@ -215,7 +211,7 @@ export default function AdminEditPage() {
                 onAnnotationClick={(id, e) => {
                   if (editing) return;
                   setActiveAnnotationId(id);
-                  setPendingSelection(null);
+                  setPendingRanges([]);
                   if (id && e) {
                     const markRect = (e.target as HTMLElement).getBoundingClientRect();
                     setAnnotationTop(computeTop(markRect));
@@ -223,16 +219,16 @@ export default function AdminEditPage() {
                     setAnnotationTop(null);
                   }
                 }}
-                onSelect={(start, end, text, rect) => {
-                  if (editing) return;
-                  setPendingSelection({ start, end, text });
+                onSelect={(range, append, rect) => {
+                  if (editing && !append) return;
                   setActiveAnnotationId(null);
+                  setPendingRanges((prev) => (append ? [...prev, range] : [range]));
                   setEditing(true);
                   if (rect) setAnnotationTop(computeTop(rect));
                 }}
                 onClickOut={() => { if (!editing) clearSelection(); }}
                 fontClass={fontClass}
-                pendingRange={pendingSelection ?? undefined}
+                pendingRanges={pendingRanges}
               />
             </div>
 
@@ -245,13 +241,20 @@ export default function AdminEditPage() {
                   pointerEvents: showSidebar ? "auto" : "none",
                 }}
               >
-                {pendingSelection && editing ? (
+                {pendingRanges.length > 0 && editing ? (
                   <div className="annotation-card relative rounded-lg border border-zinc-400 p-5 space-y-3" style={{ "--caret-top": `${caretOffset}px` } as React.CSSProperties}>
-                    <p className="text-sm font-semibold text-black">New annotation</p>
+                    <p className="text-sm font-semibold text-black">
+                      New annotation
+                      {pendingRanges.length > 1 && (
+                        <span className="ml-2 text-xs font-normal text-black">
+                          ({pendingRanges.length} selections — ⌘+drag to add more)
+                        </span>
+                      )}
+                    </p>
                     <AnnotationEditor
                       onSave={handleSaveAnnotation}
                       onCancel={() => {
-                        setPendingSelection(null);
+                        setPendingRanges([]);
                         setEditing(false);
                         setAnnotationTop(null);
                       }}

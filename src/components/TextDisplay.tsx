@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Doc } from "../../convex/_generated/dataModel";
+import type { Range } from "@/lib/annotations";
 
 type Annotation = Doc<"annotations">;
 
@@ -10,48 +11,58 @@ interface Segment {
   annotation?: Annotation;
   isPending?: boolean;
   offset: number;
+  rangeStart: number;
 }
 
 function buildSegments(
   content: string,
   annotations: Annotation[],
-  pendingStart?: number,
-  pendingEnd?: number
+  pendingRanges: Range[]
 ): Segment[] {
   const ranges: {
     start: number;
     end: number;
     annotation?: Annotation;
     isPending?: boolean;
-  }[] = [
-    ...annotations.map((a) => ({
-      start: a.startOffset,
-      end: a.endOffset,
-      annotation: a,
-    })),
-    ...(pendingStart != null && pendingEnd != null
-      ? [{ start: pendingStart, end: pendingEnd, isPending: true }]
-      : []),
-  ].sort((a, b) => a.start - b.start);
+  }[] = [];
+
+  for (const a of annotations) {
+    for (const r of a.ranges) {
+      ranges.push({ start: r.start, end: r.end, annotation: a });
+    }
+  }
+  for (const r of pendingRanges) {
+    ranges.push({ start: r.start, end: r.end, isPending: true });
+  }
+  ranges.sort((a, b) => a.start - b.start);
 
   const segments: Segment[] = [];
   let cursor = 0;
 
   for (const range of ranges) {
     if (range.start > cursor) {
-      segments.push({ text: content.slice(cursor, range.start), offset: cursor });
+      segments.push({
+        text: content.slice(cursor, range.start),
+        offset: cursor,
+        rangeStart: cursor,
+      });
     }
     segments.push({
       text: content.slice(range.start, range.end),
       annotation: range.annotation,
       isPending: range.isPending,
       offset: range.start,
+      rangeStart: range.start,
     });
     cursor = range.end;
   }
 
   if (cursor < content.length) {
-    segments.push({ text: content.slice(cursor), offset: cursor });
+    segments.push({
+      text: content.slice(cursor),
+      offset: cursor,
+      rangeStart: cursor,
+    });
   }
 
   return segments;
@@ -64,7 +75,7 @@ export default function TextDisplay({
   activeAnnotationId,
   onAnnotationClick,
   fontClass,
-  pendingRange,
+  pendingRanges,
 }: {
   content: string;
   annotations: Annotation[];
@@ -72,11 +83,11 @@ export default function TextDisplay({
   activeAnnotationId?: string;
   onAnnotationClick?: (id: string | null, e?: React.MouseEvent) => void;
   fontClass?: string;
-  pendingRange?: { start: number; end: number };
+  pendingRanges?: Range[];
 }) {
   const segments = useMemo(
-    () => buildSegments(content, annotations, pendingRange?.start, pendingRange?.end),
-    [content, annotations, pendingRange?.start, pendingRange?.end]
+    () => buildSegments(content, annotations, pendingRanges ?? []),
+    [content, annotations, pendingRanges]
   );
 
   return (
@@ -88,6 +99,7 @@ export default function TextDisplay({
           <mark
             key={i}
             data-annotation-id={seg.annotation._id}
+            data-range-start={seg.rangeStart}
             style={{
               backgroundColor: activeAnnotationId === seg.annotation._id
                 ? accentColor

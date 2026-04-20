@@ -18,8 +18,7 @@ export default defineSchema({
 
   annotations: defineTable({
     postId: v.id("posts"),
-    startOffset: v.number(),
-    endOffset: v.number(),
+    ranges: v.array(v.object({ start: v.number(), end: v.number() })),
     anchorText: v.string(),
     body: v.string(),
     createdAt: v.number(),

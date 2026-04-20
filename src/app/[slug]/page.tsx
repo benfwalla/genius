@@ -49,14 +49,15 @@ export default function PostDetailPage() {
     (id: string | null, e?: React.MouseEvent) => {
       setActiveAnnotationId(id);
       if (id && e && contentRef.current) {
+        const markEl = e.target as HTMLElement;
         const pos = computeCardPosition(
-          (e.target as HTMLElement).getBoundingClientRect(),
+          markEl.getBoundingClientRect(),
           contentRef.current.getBoundingClientRect()
         );
         setAnnotationTop(pos.cardTop);
         setCaretOffset(pos.caretOffset);
-        const ann = annotationsRef.current?.find((a) => a._id === id);
-        if (ann) history.replaceState(null, "", `#${ann.startOffset}`);
+        const rangeStart = markEl.dataset.rangeStart;
+        if (rangeStart != null) history.replaceState(null, "", `#${rangeStart}`);
       } else {
         setAnnotationTop(null);
         history.replaceState(null, "", window.location.pathname);
@@ -74,11 +75,15 @@ export default function PostDetailPage() {
     if (!hash) return;
     const offset = Number(hash);
     if (Number.isNaN(offset)) return;
-    const match = annotations.find((a) => a.startOffset === offset);
+    const match = annotations.find((a) =>
+      a.ranges.some((r) => r.start === offset)
+    );
     if (!match) return;
     restoredRef.current = true;
     requestAnimationFrame(() => {
-      const mark = document.querySelector(`[data-annotation-id="${match._id}"]`);
+      const mark = document.querySelector(
+        `[data-annotation-id="${match._id}"][data-range-start="${offset}"]`
+      );
       if (mark && contentRef.current) {
         mark.scrollIntoView({ behavior: "smooth", block: "center" });
         const pos = computeCardPosition(

@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+const rangesValidator = v.array(
+  v.object({ start: v.number(), end: v.number() })
+);
+
 export const getByPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
@@ -14,8 +18,7 @@ export const getByPost = query({
 export const create = mutation({
   args: {
     postId: v.id("posts"),
-    startOffset: v.number(),
-    endOffset: v.number(),
+    ranges: rangesValidator,
     anchorText: v.string(),
     body: v.string(),
   },
